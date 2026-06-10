@@ -2,247 +2,346 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Menú — El Restaurante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#FB3E2C" />
+  <title>Menú — Coraje Fast Food</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --red:    #D42B24;
-      --cream:  #F5EDD8;
-      --dark:   #120902;
-      --card:   #1e1008;
-      --border: rgba(245,237,216,0.1);
-      --muted:  rgba(245,237,216,0.45);
-    }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--dark);
-      color: var(--cream);
-      min-height: 100vh;
-    }
-    .bebas { font-family: 'Bebas Neue', sans-serif; }
 
-    /* Header */
+    :root {
+      --orange: #FB3E2C;
+      --cream:  #F2DDCD;
+      --dark:   #111;
+      --gray:   #f4f4f4;
+      --muted:  #888;
+    }
+
+    html, body {
+      font-family: 'Montserrat', Arial, sans-serif;
+      background: var(--orange);
+      min-height: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── HEADER ── */
     header {
       position: sticky; top: 0; z-index: 40;
-      background: rgba(18,9,2,0.92);
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1rem;
+      background: var(--orange);
+      padding: 0.9rem 1.1rem 0;
       display: flex; align-items: center; justify-content: space-between;
     }
     .back-btn {
-      display: flex; align-items: center; gap: 0.35rem;
-      color: var(--muted); font-size: 0.85rem;
-      text-decoration: none; transition: color 0.2s;
+      display: flex; align-items: center; gap: 0.3rem;
+      color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600;
+      text-decoration: none; letter-spacing: 0.04em;
     }
-    .back-btn:hover { color: var(--cream); }
-    .mesa-badge {
-      background: var(--red);
-      color: #fff;
-      font-size: 0.7rem; font-weight: 600;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      padding: 0.22rem 0.7rem; border-radius: 999px;
+    .back-btn svg { flex-shrink: 0; }
+    .header-logo {
+      font-weight: 900; font-size: 1.3rem;
+      color: var(--cream); letter-spacing: 0.08em;
     }
+    .mesa-badge { display: none; }
 
-    /* Category pills */
+    /* ── CATEGORY PILLS ── */
     .cat-scroll {
-      display: flex; gap: 0.5rem;
-      overflow-x: auto; padding: 0.75rem 1rem;
+      display: flex; gap: 0.45rem;
+      overflow-x: auto; padding: 0.85rem 1.1rem 0.6rem;
       scrollbar-width: none;
     }
     .cat-scroll::-webkit-scrollbar { display: none; }
     .cat-pill {
       flex-shrink: 0;
-      padding: 0.4rem 1rem;
+      padding: 0.38rem 1rem;
       border-radius: 999px;
-      font-size: 0.82rem; font-weight: 500;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--muted);
-      cursor: pointer; transition: all 0.2s;
+      font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      border: 2px solid rgba(255,255,255,0.5);
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      cursor: pointer;
+      transition: all 0.18s ease;
       white-space: nowrap;
     }
-    .cat-pill.active {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
+    .cat-pill.active, .cat-pill:hover {
+      background: #fff;
+      border-color: #fff;
+      color: var(--orange);
     }
 
-    /* Product grid */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
-      padding: 0 1rem 6rem;
+    /* ── CATEGORY TITLE ── */
+    .cat-title {
+      font-weight: 900; font-size: 1.7rem;
+      color: #fff;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.5rem 1.1rem 0.4rem;
     }
+
+    /* ── LISTA PRODUCTOS ── */
+    .product-list {
+      display: flex; flex-direction: column; gap: 0.75rem;
+      padding: 0 0.9rem 7rem;
+    }
+
+    /* ── TARJETA ── */
     .product-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: #fff;
+      border-radius: 18px;
+      display: flex; align-items: stretch;
       overflow: hidden;
       cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 3px 16px rgba(0,0,0,0.13);
+      min-height: 110px;
     }
-    .product-card:hover { transform: translateY(-3px); border-color: rgba(212,43,36,0.4); }
-    .product-card img {
-      width: 100%; aspect-ratio: 1;
-      object-fit: cover;
-      transition: transform 0.35s;
-    }
-    .product-card:hover img { transform: scale(1.05); }
-    .product-info { padding: 0.65rem; }
-    .product-name { font-weight: 600; font-size: 0.82rem; line-height: 1.25; margin-bottom: 0.2rem; }
-    .product-desc { font-size: 0.72rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.5rem; }
-    .product-footer { display: flex; align-items: center; justify-content: space-between; }
-    .product-price { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--cream); }
-    .add-btn {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--red); color: #fff; border: none;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 1.2rem; line-height: 1;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    .add-btn:hover { transform: scale(1.12); filter: brightness(1.1); }
+    .product-card:active { transform: scale(0.983); box-shadow: 0 1px 6px rgba(0,0,0,0.1); }
 
-    /* Floating cart */
-    .float-cart {
-      position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
-      z-index: 50;
-      display: flex; align-items: center; gap: 0.75rem;
-      background: var(--red); color: #fff;
-      padding: 0.85rem 1.4rem;
-      border-radius: 999px;
-      font-weight: 600; font-size: 0.92rem;
-      box-shadow: 0 8px 28px rgba(212,43,36,0.55);
-      cursor: pointer; border: none;
-      transition: transform 0.2s, filter 0.2s;
-      white-space: nowrap;
+    /* imagen */
+    .product-img-wrap {
+      flex-shrink: 0;
+      width: 120px;
+      position: relative;
+      background: var(--gray);
     }
-    .float-cart:hover { transform: translateX(-50%) translateY(-2px); filter: brightness(1.08); }
+    .product-img-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    .product-img-placeholder {
+      width: 100%; height: 100%; min-height: 110px;
+      background: #f0ebe6;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.4rem;
+    }
+
+    /* info */
+    .product-info {
+      flex: 1;
+      padding: 0.9rem 0.7rem 0.9rem 1rem;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 0.2rem;
+    }
+    .product-name {
+      font-weight: 900; font-size: 0.95rem;
+      color: var(--dark); line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .product-desc {
+      font-size: 0.71rem; color: var(--muted);
+      line-height: 1.45; font-weight: 400;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    /* precios — columna derecha */
+    .product-prices {
+      flex-shrink: 0;
+      display: flex; flex-direction: column;
+      align-items: flex-end; justify-content: center;
+      gap: 0.35rem;
+      padding: 0.9rem 0.9rem 0.9rem 0.4rem;
+    }
+    .price-solo {
+      display: flex; flex-direction: column; align-items: flex-end;
+      background: var(--orange);
+      color: #fff;
+      border-radius: 10px;
+      padding: 0.3rem 0.65rem;
+      font-weight: 800; font-size: 0.85rem;
+      white-space: nowrap; line-height: 1.2;
+    }
+    .price-solo span.label {
+      font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      opacity: 0.8;
+    }
+    .price-combo {
+      display: flex; flex-direction: column; align-items: flex-end;
+      background: var(--gray);
+      border-radius: 10px;
+      padding: 0.28rem 0.6rem;
+      font-weight: 800; font-size: 0.82rem;
+      color: var(--dark);
+      white-space: nowrap; line-height: 1.2;
+    }
+    .price-combo .combo-label {
+      font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    /* sin combo */
+    .price-only {
+      background: var(--orange); color: #fff;
+      border-radius: 10px;
+      padding: 0.38rem 0.75rem;
+      font-weight: 800; font-size: 0.88rem;
+    }
+
+    /* ── BOTÓN CARRITO FLOTANTE ── */
+    .float-cart {
+      position: fixed; bottom: 1.2rem; left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex; align-items: center; gap: 0.6rem;
+      background: var(--dark); color: #fff;
+      padding: 0.9rem 1.6rem;
+      border-radius: 999px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700; font-size: 0.88rem;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      box-shadow: 0 6px 28px rgba(0,0,0,0.3);
+      cursor: pointer; border: none;
+      white-space: nowrap;
+      transition: transform 0.2s, filter 0.2s;
+    }
+    .float-cart:active { transform: translateX(-50%) scale(0.97); }
     .cart-count {
-      background: rgba(255,255,255,0.25);
+      background: var(--orange);
       border-radius: 999px;
       padding: 0.1rem 0.5rem;
-      font-size: 0.8rem; font-weight: 700;
+      font-size: 0.78rem; font-weight: 800;
     }
 
-    /* Modal backdrop */
+    /* ── MODAL BACKDROP ── */
     .modal-bg {
       position: fixed; inset: 0; z-index: 60;
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.6);
       display: flex; align-items: flex-end; justify-content: center;
       padding: 0 0.75rem 0.75rem;
+      backdrop-filter: blur(4px);
     }
     .modal-box {
-      background: #1e1008;
-      border: 1px solid var(--border);
-      border-radius: 20px 20px 16px 16px;
-      width: 100%; max-width: 420px;
+      background: #fff;
+      border-radius: 24px 24px 16px 16px;
+      width: 100%; max-width: 440px;
       max-height: 88vh;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: 1.5rem;
     }
-    .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .modal-title {
+      font-weight: 900; font-size: 1.4rem;
+      letter-spacing: 0.02em; color: var(--dark);
+      margin-bottom: 1rem;
+    }
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: #ddd; border-radius: 999px;
+      margin: 0 auto 1rem;
+    }
 
-    /* Cart items */
+    /* detalle producto */
+    .detail-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 14px; margin-bottom: 1rem; }
+    .detail-name { font-weight: 900; font-size: 1.4rem; color: var(--dark); margin-bottom: 0.3rem; }
+    .detail-desc { color: var(--muted); font-size: 0.87rem; line-height: 1.55; margin-bottom: 1rem; }
+
+    /* opciones solo/combo en detalle */
+    .detail-options { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+    .detail-option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1rem;
+      border-radius: 12px; cursor: pointer;
+      border: 2px solid #eee;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .detail-option.selected {
+      border-color: var(--orange);
+      background: rgba(251,62,44,0.05);
+    }
+    .detail-option-label { font-weight: 700; font-size: 0.9rem; color: var(--dark); }
+    .detail-option-sub { font-size: 0.72rem; color: var(--muted); }
+    .detail-option-price { font-weight: 900; font-size: 1rem; color: var(--orange); }
+    .detail-add {
+      width: 100%; padding: 1rem;
+      background: var(--orange); color: #fff;
+      border: none; border-radius: 12px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800; font-size: 0.95rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; transition: filter 0.15s;
+    }
+    .detail-add:active { filter: brightness(0.92); }
+
+    /* ── CARRITO ── */
     .cart-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.65rem 0;
-      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.7rem 0; border-bottom: 1px solid #f0f0f0;
     }
-    .cart-item-name { flex: 1; font-weight: 500; font-size: 0.88rem; }
-    .qty-controls { display: flex; align-items: center; gap: 0.5rem; }
+    .cart-item-name { flex: 1; font-weight: 600; font-size: 0.86rem; color: var(--dark); }
+    .cart-item-sub { font-size: 0.7rem; color: var(--muted); }
+    .qty-controls { display: flex; align-items: center; gap: 0.4rem; }
     .qty-btn {
-      width: 26px; height: 26px; border-radius: 50%;
-      border: 1px solid var(--border);
-      background: transparent; color: var(--cream);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 1rem;
-      transition: background 0.15s;
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1.5px solid #ddd; background: transparent;
+      color: var(--dark); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; font-size: 1rem;
+      transition: background 0.15s, border-color 0.15s;
     }
-    .qty-btn:hover { background: var(--red); border-color: var(--red); }
-    .qty-num { font-weight: 600; font-size: 0.9rem; min-width: 20px; text-align: center; }
-    .cart-item-price { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; min-width: 60px; text-align: right; }
-
-    /* Total */
+    .qty-btn:active { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .qty-num { font-weight: 700; font-size: 0.9rem; min-width: 20px; text-align: center; color: var(--dark); }
+    .cart-item-price { font-weight: 800; font-size: 0.9rem; color: var(--dark); min-width: 65px; text-align: right; }
     .cart-total {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 1rem 0 0.75rem;
-      font-weight: 600;
+      padding: 1rem 0 0.75rem; font-weight: 700;
+      font-size: 0.9rem; color: var(--dark);
     }
-    .cart-total-amount { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; }
+    .cart-total-amount { font-weight: 900; font-size: 1.5rem; color: var(--orange); }
 
-    /* Form fields */
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.3rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    /* campos */
+    .field { margin-bottom: 0.7rem; }
+    .field label {
+      display: block; font-size: 0.72rem; font-weight: 700;
+      color: var(--muted); margin-bottom: 0.3rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
     .field input, .field textarea {
-      width: 100%; background: rgba(245,237,216,0.05);
-      border: 1px solid var(--border); border-radius: 8px;
-      color: var(--cream); font-family: 'DM Sans', sans-serif;
-      font-size: 0.88rem; padding: 0.6rem 0.8rem;
-      transition: border-color 0.2s;
+      width: 100%; background: var(--gray);
+      border: 1.5px solid transparent; border-radius: 10px;
+      color: var(--dark); font-family: 'Montserrat', sans-serif;
+      font-size: 0.88rem; padding: 0.65rem 0.85rem;
+      transition: border-color 0.2s; outline: none;
     }
-    .field input:focus, .field textarea:focus {
-      outline: none; border-color: var(--red);
-    }
+    .field input:focus, .field textarea:focus { border-color: var(--orange); }
     .field textarea { resize: none; height: 70px; }
 
-    /* Confirm btn */
     .confirm-btn {
       width: 100%; padding: 1rem;
-      background: var(--red); color: #fff;
-      border: none; border-radius: 10px;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.1rem; letter-spacing: 0.1em;
-      cursor: pointer; transition: filter 0.2s;
+      background: var(--orange); color: #fff;
+      border: none; border-radius: 12px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800; font-size: 0.95rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; transition: filter 0.15s;
       margin-top: 0.5rem;
     }
-    .confirm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .confirm-btn:not(:disabled):hover { filter: brightness(1.1); }
+    .confirm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .confirm-btn:not(:disabled):active { filter: brightness(0.92); }
 
-    /* Success screen */
+    /* éxito */
     .success-screen {
       position: fixed; inset: 0; z-index: 70;
-      background: var(--dark);
+      background: var(--orange);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       padding: 2rem; text-align: center;
     }
     .success-icon { font-size: 4rem; margin-bottom: 1rem; }
-    .success-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
-    .success-sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 2rem; }
-    .order-num {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 4rem; color: var(--red);
-      line-height: 1; margin-bottom: 0.25rem;
-    }
+    .success-title { font-weight: 900; font-size: 2.2rem; color: #fff; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+    .success-sub { color: rgba(255,255,255,0.75); font-size: 0.92rem; margin-bottom: 1.5rem; }
+    .order-num { font-weight: 900; font-size: 4.5rem; color: var(--cream); line-height: 1; margin-bottom: 0.25rem; }
     .new-order-btn {
-      margin-top: 2rem; padding: 0.85rem 2rem;
-      background: transparent; color: var(--cream);
-      border: 1px solid var(--border); border-radius: 999px;
-      font-size: 0.88rem; font-weight: 500; cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-    }
-    .new-order-btn:hover { border-color: var(--cream); }
-
-    /* Product detail modal */
-    .detail-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; margin-bottom: 1rem; }
-    .detail-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; letter-spacing: 0.04em; margin-bottom: 0.35rem; }
-    .detail-desc { color: var(--muted); font-size: 0.88rem; line-height: 1.55; margin-bottom: 1rem; }
-    .detail-footer { display: flex; align-items: center; justify-content: space-between; }
-    .detail-price { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; }
-    .detail-add {
-      display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.7rem 1.2rem;
-      background: var(--red); color: #fff;
-      border: none; border-radius: 8px;
-      font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.08em;
+      margin-top: 2rem; padding: 0.85rem 2.2rem;
+      background: var(--cream); color: var(--orange);
+      border: none; border-radius: 999px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700; font-size: 0.88rem;
+      letter-spacing: 0.06em; text-transform: uppercase;
       cursor: pointer;
     }
   </style>
@@ -258,37 +357,74 @@
       </svg>
       Inicio
     </a>
-    <h1 class="bebas" style="font-size:1.35rem;letter-spacing:0.06em">Menú</h1>
+    <span class="header-logo">CORAJE</span>
     <span class="mesa-badge" x-text="'Mesa ' + mesa"></span>
   </header>
 
   <!-- CATEGORÍAS -->
   <div class="cat-scroll">
     <template x-for="cat in categories" :key="cat">
-      <button class="cat-pill" :class="{ active: activeCategory === cat }" @click="activeCategory = cat" x-text="cat"></button>
+      <button
+        class="cat-pill"
+        :class="{ active: activeCategory === cat }"
+        @click="activeCategory = cat"
+        x-text="cat"
+      ></button>
     </template>
   </div>
 
-  <!-- GRID PRODUCTOS -->
-  <div class="grid">
+  <!-- TÍTULO CATEGORÍA -->
+  <div class="cat-title" x-text="activeCategory === 'Todos' ? 'Menú' : activeCategory"></div>
+
+  <!-- LISTA DE PRODUCTOS -->
+  <div class="product-list">
     <template x-for="item in filteredItems" :key="item.id">
       <div class="product-card" @click="openDetail(item)">
-        <img :src="item.image" :alt="item.name" loading="lazy" />
+
+        <!-- Imagen -->
+        <div class="product-img-wrap">
+          <template x-if="item.image">
+            <img :src="item.image" :alt="item.name" loading="lazy" />
+          </template>
+          <template x-if="!item.image">
+            <div class="product-img-placeholder" x-text="item.emoji || '🍽️'"></div>
+          </template>
+        </div>
+
+        <!-- Info -->
         <div class="product-info">
           <div class="product-name" x-text="item.name"></div>
           <div class="product-desc" x-text="item.description"></div>
-          <div class="product-footer">
-            <span class="product-price" x-text="'$' + item.price.toLocaleString('es-CO')"></span>
-            <button class="add-btn" @click.stop="addToCart(item)" aria-label="Agregar">+</button>
-          </div>
         </div>
+
+        <!-- Precios -->
+        <div class="product-prices">
+          <template x-if="item.priceCombo">
+            <div>
+              <div class="price-solo">
+                <span class="label">Sola</span>
+                <span x-text="'$' + item.price.toLocaleString('es-CO')"></span>
+              </div>
+            </div>
+          </template>
+          <template x-if="!item.priceCombo">
+            <div class="price-only" x-text="'$' + item.price.toLocaleString('es-CO')"></div>
+          </template>
+          <template x-if="item.priceCombo">
+            <div class="price-combo">
+              <span class="combo-label">Con Papas</span>
+              <span x-text="'$' + item.priceCombo.toLocaleString('es-CO')"></span>
+            </div>
+          </template>
+        </div>
+
       </div>
     </template>
   </div>
 
   <!-- BOTÓN CARRITO FLOTANTE -->
   <button class="float-cart" x-show="cart.length > 0" @click="showCart = true" x-transition>
-    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+    <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
     </svg>
     Ver pedido
@@ -297,53 +433,82 @@
 
   <!-- MODAL DETALLE PRODUCTO -->
   <div class="modal-bg" x-show="selectedItem" @click.self="selectedItem = null" x-transition style="display:none">
-    <div class="modal-box" x-show="selectedItem" x-transition>
-      <img :src="selectedItem?.image" :alt="selectedItem?.name" class="detail-img" />
+    <div class="modal-box" x-show="selectedItem">
+      <div class="modal-handle"></div>
+
+      <template x-if="selectedItem?.image">
+        <img :src="selectedItem.image" :alt="selectedItem.name" class="detail-img" />
+      </template>
+
       <div class="detail-name" x-text="selectedItem?.name"></div>
       <div class="detail-desc" x-text="selectedItem?.description"></div>
-      <div class="detail-footer">
-        <span class="detail-price" x-text="selectedItem ? '$' + selectedItem.price.toLocaleString('es-CO') : ''"></span>
-        <button class="detail-add" @click="addToCart(selectedItem); selectedItem = null">
-          + Agregar
-        </button>
+
+      <!-- Opciones solo / combo -->
+      <div class="detail-options" x-show="selectedItem?.priceCombo">
+        <div
+          class="detail-option"
+          :class="{ selected: selectedOption === 'solo' }"
+          @click="selectedOption = 'solo'"
+        >
+          <div>
+            <div class="detail-option-label">Solo</div>
+          </div>
+          <div class="detail-option-price" x-text="selectedItem ? '$' + selectedItem.price.toLocaleString('es-CO') : ''"></div>
+        </div>
+        <div
+          class="detail-option"
+          :class="{ selected: selectedOption === 'combo' }"
+          @click="selectedOption = 'combo'"
+        >
+          <div>
+            <div class="detail-option-label">Combo</div>
+            <div class="detail-option-sub">Papas y gaseosa</div>
+          </div>
+          <div class="detail-option-price" x-text="selectedItem?.priceCombo ? '$' + selectedItem.priceCombo.toLocaleString('es-CO') : ''"></div>
+        </div>
       </div>
+
+      <button class="detail-add" @click="addToCartFromDetail()">
+        + Agregar al pedido
+      </button>
     </div>
   </div>
 
-  <!-- MODAL CARRITO / CONFIRMAR PEDIDO -->
+  <!-- MODAL CARRITO -->
   <div class="modal-bg" x-show="showCart && !orderSuccess" @click.self="showCart = false" x-transition style="display:none">
     <div class="modal-box">
+      <div class="modal-handle"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
         <h2 class="modal-title" style="margin-bottom:0">Tu Pedido</h2>
-        <button @click="showCart = false" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.4rem">×</button>
+        <button @click="showCart = false" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#999;line-height:1">×</button>
       </div>
 
-      <!-- Items del carrito -->
-      <template x-for="(item, i) in cart" :key="item.id">
+      <template x-for="(item, i) in cart" :key="item.cartId">
         <div class="cart-item">
-          <span class="cart-item-name" x-text="item.name"></span>
+          <div style="flex:1">
+            <div class="cart-item-name" x-text="item.name"></div>
+            <div class="cart-item-sub" x-text="item.option === 'combo' ? 'Combo (Papas y gaseosa)' : 'Solo'"></div>
+          </div>
           <div class="qty-controls">
             <button class="qty-btn" @click="decreaseQty(i)">−</button>
             <span class="qty-num" x-text="item.qty"></span>
             <button class="qty-btn" @click="item.qty++">+</button>
           </div>
-          <span class="cart-item-price" x-text="'$' + (item.price * item.qty).toLocaleString('es-CO')"></span>
+          <span class="cart-item-price" x-text="'$' + (item.unitPrice * item.qty).toLocaleString('es-CO')"></span>
         </div>
       </template>
 
-      <!-- Total -->
       <div class="cart-total">
         <span>Total</span>
         <span class="cart-total-amount" x-text="'$' + cartTotal.toLocaleString('es-CO')"></span>
       </div>
 
-      <!-- Nombre, NIT y notas -->
       <div class="field">
         <label>Tu nombre (opcional)</label>
         <input type="text" x-model="customerName" placeholder="Ej: Carlos" maxlength="40" />
       </div>
       <div class="field">
-        <label>NIT o Cédula — para factura (opcional)</label>
+        <label>NIT o Cédula — factura (opcional)</label>
         <input type="text" x-model="customerNit" placeholder="Vacío = Consumidor Final" maxlength="20" inputmode="numeric" />
       </div>
       <div class="field">
@@ -352,28 +517,28 @@
       </div>
 
       <button class="confirm-btn" @click="sendOrder()" :disabled="sending" x-text="sending ? 'Enviando...' : 'Confirmar Pedido'"></button>
-
-      <p x-show="sendError" style="color:#f87171;font-size:0.8rem;margin-top:0.5rem;text-align:center" x-text="sendError"></p>
+      <p x-show="sendError" style="color:var(--orange);font-size:0.8rem;margin-top:0.5rem;text-align:center" x-text="sendError"></p>
     </div>
   </div>
 
-  <!-- PANTALLA DE ÉXITO -->
+  <!-- PANTALLA ÉXITO -->
   <div class="success-screen" x-show="orderSuccess" x-transition style="display:none">
     <div class="success-icon">✅</div>
     <h2 class="success-title">¡Pedido enviado!</h2>
     <p class="success-sub">La cocina recibió tu pedido</p>
-    <div style="color:var(--muted);font-size:0.8rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.25rem">Número de pedido</div>
+    <div style="color:rgba(255,255,255,0.6);font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.2rem">Número de pedido</div>
     <div class="order-num" x-text="'#' + orderId"></div>
-    <div style="color:var(--muted);font-size:0.82rem;margin-top:0.5rem">Mesa <span x-text="mesa" style="color:var(--cream);font-weight:600"></span></div>
+    <div style="color:rgba(255,255,255,0.65);font-size:0.82rem;margin-top:0.4rem">Mesa <span x-text="mesa" style="color:#fff;font-weight:700"></span></div>
     <button class="new-order-btn" @click="resetOrder()">Hacer otro pedido</button>
   </div>
 
   <script>
     function menuApp() {
       return {
-        mesa: '?',
+        mesa: '1',
         activeCategory: 'Todos',
         selectedItem: null,
+        selectedOption: 'solo',
         showCart: false,
         cart: [],
         customerName: '',
@@ -383,16 +548,23 @@
         sendError: '',
         orderSuccess: false,
         orderId: null,
+        cartIdCounter: 0,
 
         items: [
-          { id: 1, name: 'Hamburguesa Clásica', description: 'Carne 100% res, lechuga, tomate, queso cheddar y salsa especial de la casa.', price: 18000, category: 'Hamburguesas', image: 'https://placehold.co/400x400/D42B24/F5EDD8?text=🍔' },
-          { id: 2, name: 'Hamburguesa BBQ', description: 'Doble carne, tocino crujiente, aros de cebolla y salsa BBQ ahumada.', price: 24000, category: 'Hamburguesas', image: 'https://placehold.co/400x400/8B1A1A/F5EDD8?text=BBQ' },
-          { id: 3, name: 'Hamburguesa Pollo', description: 'Pechuga apanada, mayonesa de ajo, aguacate y ensalada fresca.', price: 20000, category: 'Hamburguesas', image: 'https://placehold.co/400x400/5C1010/F5EDD8?text=🐔' },
-          { id: 4, name: 'Papas Fritas', description: 'Papas crujientes con sal marina y el aderezo que elijas.', price: 8000, category: 'Acompañamientos', image: 'https://placehold.co/400x400/C47A1E/F5EDD8?text=🍟' },
-          { id: 5, name: 'Papas Rellenas', description: 'Papas cargadas con queso fundido, carne y tocineta.', price: 14000, category: 'Acompañamientos', image: 'https://placehold.co/400x400/9B5E10/F5EDD8?text=🥔' },
-          { id: 6, name: 'Coca-Cola', description: 'Bebida gaseosa 350ml bien fría.', price: 4000, category: 'Bebidas', image: 'https://placehold.co/400x400/8B0000/F5EDD8?text=🥤' },
-          { id: 7, name: 'Limonada Natural', description: 'Limonada natural con hielo y menta fresca.', price: 6000, category: 'Bebidas', image: 'https://placehold.co/400x400/4A7C00/F5EDD8?text=🍋' },
-          { id: 8, name: 'Combo Clásico', description: 'Hamburguesa clásica + papas fritas + gaseosa a elección.', price: 28000, category: 'Combos', image: 'https://placehold.co/400x400/D42B24/F5EDD8?text=COMBO' },
+          // CHUZOS
+          { id: 1,  name: 'Chuzo desgranado de panceta', description: 'Panceta caramelizada, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 29500, priceCombo: 37500, category: 'Chuzos', image: '' },
+          { id: 2,  name: 'Chuzo desgranado', description: 'RES, POLLO, MIXTO (res y pollo), batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 33900, priceCombo: 42900, category: 'Chuzos', image: '' },
+          // HAMBURGUESAS
+          { id: 3,  name: 'Hamburguesa Coraje', description: 'Carne 100% res, lechuga, tomate, queso cheddar y salsa especial de la casa.', price: 22000, priceCombo: 30000, category: 'Hamburguesas', image: '' },
+          { id: 4,  name: 'Hamburguesa BBQ', description: 'Doble carne, tocino crujiente, aros de cebolla y salsa BBQ ahumada.', price: 26000, priceCombo: 34000, category: 'Hamburguesas', image: '' },
+          { id: 5,  name: 'Hamburguesa de Pollo', description: 'Pechuga apanada, mayonesa de ajo, aguacate y ensalada fresca.', price: 24000, priceCombo: 32000, category: 'Hamburguesas', image: '' },
+          // PAPAS
+          { id: 6,  name: 'Papas Fritas', description: 'Papas crujientes con sal marina y el aderezo que elijas.', price: 9000, category: 'Papas', image: '' },
+          { id: 7,  name: 'Papas con Cheddar', description: 'Papas cargadas con queso cheddar fundido y tocineta crujiente.', price: 13000, category: 'Papas', image: '' },
+          // BEBIDAS
+          { id: 8,  name: 'Gaseosa', description: 'Coca-Cola, Sprite o Manzana — 350ml bien fría.', price: 4500, category: 'Bebidas', image: '' },
+          { id: 9,  name: 'Limonada Natural', description: 'Limonada natural con hielo y menta fresca.', price: 6500, category: 'Bebidas', image: '' },
+          { id: 10, name: 'Agua', description: 'Agua mineral 500ml.', price: 3000, category: 'Bebidas', image: '' },
         ],
 
         init() {
@@ -404,21 +576,33 @@
           return ['Todos', ...new Set(this.items.map(i => i.category))];
         },
         get filteredItems() {
-          return this.activeCategory === 'Todos' ? this.items : this.items.filter(i => i.category === this.activeCategory);
+          return this.activeCategory === 'Todos'
+            ? this.items
+            : this.items.filter(i => i.category === this.activeCategory);
         },
-        get cartCount() {
-          return this.cart.reduce((s, i) => s + i.qty, 0);
-        },
-        get cartTotal() {
-          return this.cart.reduce((s, i) => s + i.price * i.qty, 0);
+        get cartCount() { return this.cart.reduce((s, i) => s + i.qty, 0); },
+        get cartTotal() { return this.cart.reduce((s, i) => s + i.unitPrice * i.qty, 0); },
+
+        openDetail(item) {
+          this.selectedItem = item;
+          this.selectedOption = 'solo';
         },
 
-        openDetail(item) { this.selectedItem = item; },
-
-        addToCart(item) {
-          const existing = this.cart.find(i => i.id === item.id);
-          if (existing) existing.qty++;
-          else this.cart.push({ ...item, qty: 1 });
+        addToCartFromDetail() {
+          const item = this.selectedItem;
+          const isCombo = this.selectedOption === 'combo' && item.priceCombo;
+          const unitPrice = isCombo ? item.priceCombo : item.price;
+          const cartId = ++this.cartIdCounter;
+          this.cart.push({
+            cartId,
+            id: item.id,
+            name: item.name,
+            option: isCombo ? 'combo' : 'solo',
+            unitPrice,
+            qty: 1,
+            price: unitPrice,
+          });
+          this.selectedItem = null;
         },
 
         decreaseQty(index) {
@@ -435,7 +619,11 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 mesa: this.mesa,
-                items: this.cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+                items: this.cart.map(i => ({
+                  name: i.name + (i.option === 'combo' ? ' (Combo)' : ''),
+                  qty: i.qty,
+                  price: i.unitPrice
+                })),
                 nombre: this.customerName,
                 notas:  this.orderNotes,
                 nit:    this.customerNit,
