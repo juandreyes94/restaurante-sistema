@@ -219,19 +219,25 @@
       border-radius: 999px; margin: 1rem auto 0;
     }
 
-    /* imagen grande del modal */
+    /* imagen grande del modal — 4:3 paisaje */
     .detail-img-wrap {
       width: 100%;
-      aspect-ratio: 4 / 3;
-      background: #ede8e3;
-      overflow: hidden;
+      aspect-ratio: 4/3;
       margin-top: 0.75rem;
+      overflow: hidden;
+      background: #111;
     }
-    .detail-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+    }
     .detail-img-placeholder {
-      width: 100%; height: 100%;
+      width: 100%; height: 200px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 6rem;
+      font-size: 6rem; background: #ede8e3;
     }
 
     /* texto del modal */
