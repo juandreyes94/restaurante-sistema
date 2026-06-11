@@ -45,7 +45,7 @@
       text-decoration: none; letter-spacing: 0.04em;
     }
     .header-logo img {
-      height: 36px;
+      height: 52px;
       width: auto;
       display: block;
       filter: brightness(0) saturate(100%) invert(93%) sepia(18%) saturate(300%) hue-rotate(330deg) brightness(105%);
@@ -61,12 +61,21 @@
 
     /* ── CATEGORY PILLS ── */
     .cat-scroll {
-      display: flex; gap: 0.45rem;
-      overflow-x: auto; padding: 0.9rem 1.2rem 0.7rem;
-      scrollbar-width: none;
+      overflow: hidden;
+      padding: 0.9rem 0 0.7rem;
       max-width: 780px; margin: 0 auto;
     }
-    .cat-scroll::-webkit-scrollbar { display: none; }
+    .cat-track {
+      display: flex; gap: 0.45rem;
+      width: max-content;
+      animation: cat-marquee 14s linear infinite;
+      padding: 0 0.6rem;
+    }
+    .cat-track:hover { animation-play-state: paused; }
+    @keyframes cat-marquee {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
     .cat-pill {
       flex-shrink: 0; padding: 0.4rem 1.1rem;
       border-radius: 999px; font-size: 0.78rem;
@@ -98,105 +107,119 @@
 
     /* ── LISTA ── */
     .product-list {
-      display: flex; flex-direction: column; gap: 1rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
       padding-bottom: 3rem;
+    }
+    @media (min-width: 540px) {
+      .product-list { grid-template-columns: 1fr 1fr; }
     }
 
     /* ── TARJETA ── */
     .product-card {
       background: #fff;
-      border-radius: 20px;
-      display: flex; align-items: stretch;
-      overflow: hidden; cursor: pointer;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.1);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-      min-height: 150px;
-    }
-    .product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.15); }
-    .product-card:active { transform: scale(0.984); box-shadow: 0 1px 8px rgba(0,0,0,0.1); }
-
-    /* imagen — proporción cuadrada fija */
-    .product-img-wrap {
-      flex-shrink: 0;
-      width: 150px;
-      height: 150px;
-      background: #ede8e3;
-      position: relative;
+      border-radius: 18px;
       overflow: hidden;
-      align-self: center;
-      margin: 6px 0 6px 6px;
-      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 3px 18px rgba(0,0,0,0.13);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      display: flex; flex-direction: column;
+    }
+    .product-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.18); }
+    .product-card:active { transform: scale(0.97); }
+
+    /* imagen full-width arriba */
+    .product-img-wrap {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #1a1a1a;
+      overflow: hidden;
+      position: relative;
     }
     .product-img-wrap img {
-      position: absolute;
-      inset: 0;
       width: 100%; height: 100%;
       object-fit: cover;
-      object-position: center center;
+      object-position: center;
       display: block;
       transition: transform 0.3s ease;
     }
-    .product-card:hover .product-img-wrap img { transform: scale(1.05); }
-    .product-img-placeholder {
-      width: 100%; height: 100%;
-      background: #ede8e3;
+    .product-card:hover .product-img-wrap img { transform: scale(1.06); }
+    /* Tarjetas sin foto (Bebidas, Adiciones) */
+    .product-card.no-img {
+      flex-direction: row;
+      align-items: center;
+      grid-column: 1 / -1;
+    }
+    .no-img-emoji {
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, #1c1c1c, #333);
+      border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 3rem;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+      margin: 0.8rem 0 0.8rem 0.8rem;
+    }
+    .product-card.no-img .product-info {
+      padding: 0.75rem 0.5rem 0.75rem 0.85rem;
+    }
+    .product-card.no-img .product-name {
+      font-size: 0.88rem;
+    }
+    .product-card.no-img .product-prices {
+      padding: 0.75rem 0.85rem 0.75rem 0.2rem;
+      align-self: center;
     }
 
     /* info */
     .product-info {
-      flex: 1; padding: 1rem 0.8rem 1rem 1.1rem;
-      display: flex; flex-direction: column; justify-content: center; gap: 0.2rem;
+      padding: 0.7rem 0.75rem 0.3rem;
+      flex: 1;
     }
     .product-name {
-      font-weight: 900; font-size: 1rem;
+      font-weight: 900; font-size: 0.82rem;
       color: var(--dark); line-height: 1.25; letter-spacing: -0.01em;
+      margin-bottom: 0.2rem;
     }
     .product-desc {
-      font-size: 0.75rem; color: var(--muted); line-height: 1.5; font-weight: 400;
+      font-size: 0.68rem; color: var(--muted); line-height: 1.45; font-weight: 400;
       display: -webkit-box; -webkit-line-clamp: 2;
       -webkit-box-orient: vertical; overflow: hidden;
-      margin-top: 0.1rem;
     }
 
     /* precios */
     .product-prices {
-      flex-shrink: 0; display: flex; flex-direction: column;
-      align-items: flex-end; justify-content: center;
-      gap: 0.4rem; padding: 0.75rem 0.65rem 0.75rem 0.3rem;
-      width: 84px;
+      display: flex; gap: 0.35rem; flex-wrap: wrap;
+      padding: 0.5rem 0.75rem 0.75rem;
     }
     .price-solo {
       display: flex; flex-direction: column; align-items: center;
-      background: var(--orange); color: #fff;
-      border-radius: 10px; padding: 0.35rem 0.5rem;
-      font-weight: 800; font-size: 0.78rem; white-space: nowrap;
-      width: 100%; text-align: center;
+      background: var(--gray); color: var(--dark);
+      border-radius: 8px; padding: 0.28rem 0.45rem;
+      font-weight: 800; font-size: 0.72rem; white-space: nowrap;
     }
     .price-solo .lbl {
-      font-size: 0.5rem; font-weight: 800;
-      letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.82;
-      margin-bottom: 0.05rem;
+      font-size: 0.44rem; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 0.02rem;
     }
     .price-combo {
       display: flex; flex-direction: column; align-items: center;
-      background: var(--gray); color: var(--dark);
-      border-radius: 10px; padding: 0.35rem 0.5rem;
-      font-weight: 800; font-size: 0.78rem; white-space: nowrap;
-      width: 100%; text-align: center;
+      background: var(--orange); color: #fff;
+      border-radius: 8px; padding: 0.28rem 0.45rem;
+      font-weight: 800; font-size: 0.72rem; white-space: nowrap;
     }
     .price-combo .lbl {
-      font-size: 0.5rem; font-weight: 800;
-      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
-      margin-bottom: 0.05rem;
+      font-size: 0.44rem; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.82;
+      margin-bottom: 0.02rem;
     }
     .price-only {
       background: var(--orange); color: #fff;
-      border-radius: 10px; padding: 0.45rem 0.5rem;
-      font-weight: 800; font-size: 0.82rem; text-align: center;
-      width: 100%;
+      border-radius: 8px; padding: 0.32rem 0.5rem;
+      font-weight: 800; font-size: 0.75rem;
     }
+
 
     /* ── MODAL ── */
     .modal-bg {
@@ -269,8 +292,8 @@
       border-radius: 14px; padding: 0.75rem 1.2rem;
       flex: 1; min-width: 120px;
     }
-    .detail-price-pill.solo { background: var(--orange); color: #fff; }
-    .detail-price-pill.combo { background: var(--gray); color: var(--dark); }
+    .detail-price-pill.solo { background: var(--gray); color: var(--dark); }
+    .detail-price-pill.combo { background: var(--orange); color: #fff; }
     .detail-price-pill .pill-label {
       font-size: 0.62rem; font-weight: 800;
       letter-spacing: 0.14em; text-transform: uppercase;
@@ -313,10 +336,16 @@
 
     <!-- CATEGORÍAS -->
     <div class="cat-scroll">
-      <template x-for="cat in categories" :key="cat">
-        <button class="cat-pill" :class="{ active: activeCategory === cat }"
-          @click="activeCategory = cat" x-text="cat"></button>
-      </template>
+      <div class="cat-track">
+        <template x-for="cat in categories" :key="'a-'+cat">
+          <button class="cat-pill" :class="{ active: activeCategory === cat }"
+            @click="activeCategory = cat" x-text="cat"></button>
+        </template>
+        <template x-for="cat in categories" :key="'b-'+cat">
+          <button class="cat-pill" :class="{ active: activeCategory === cat }"
+            @click="activeCategory = cat" x-text="cat"></button>
+        </template>
+      </div>
     </div>
   </div>
 
@@ -330,19 +359,22 @@
         <div class="section-title" x-text="cat"></div>
         <div class="product-list" style="margin-bottom:0.5rem">
           <template x-for="item in items.filter(i => i.category === cat)" :key="item.id">
-            <div class="product-card" @click="openDetail(item)">
+            <div class="product-card" :class="{ 'no-img': !item.image }" @click="openDetail(item)">
               <template x-if="item.image">
                 <div class="product-img-wrap">
                   <img :src="item.image" :alt="item.name" loading="lazy" />
                 </div>
               </template>
+              <template x-if="!item.image">
+                <div class="no-img-emoji" x-text="item.emoji||'🍽️'"></div>
+              </template>
               <div class="product-info">
                 <div class="product-name" x-text="item.name"></div>
-                <div class="product-desc" x-text="item.ingredients||item.description"></div>
+                <div class="product-desc" x-text="item.description||item.ingredients"></div>
               </div>
               <div class="product-prices">
                 <template x-if="item.priceCombo">
-                  <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end">
+                  <div style="display:contents">
                     <div class="price-solo"><span class="lbl">Solo</span><span x-text="'$'+item.price.toLocaleString('es-CO')"></span></div>
                     <div class="price-combo"><span class="lbl">Combo</span><span x-text="'$'+item.priceCombo.toLocaleString('es-CO')"></span></div>
                   </div>
@@ -360,19 +392,22 @@
     <!-- Vista categoría individual -->
     <div class="product-list" x-show="activeCategory !== 'Todos'" style="scrollbar-width:none">
       <template x-for="item in filteredItems" :key="item.id">
-        <div class="product-card" @click="openDetail(item)">
+        <div class="product-card" :class="{ 'no-img': !item.image }" @click="openDetail(item)">
           <template x-if="item.image">
             <div class="product-img-wrap">
               <img :src="item.image" :alt="item.name" loading="lazy" />
             </div>
           </template>
+          <template x-if="!item.image">
+            <div class="no-img-emoji" x-text="item.emoji||'🍽️'"></div>
+          </template>
           <div class="product-info">
             <div class="product-name" x-text="item.name"></div>
-            <div class="product-desc" x-text="item.ingredients||item.description"></div>
+            <div class="product-desc" x-text="item.description||item.ingredients"></div>
           </div>
           <div class="product-prices">
             <template x-if="item.priceCombo">
-              <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end">
+              <div style="display:contents">
                 <div class="price-solo"><span class="lbl">Solo</span><span x-text="'$'+item.price.toLocaleString('es-CO')"></span></div>
                 <div class="price-combo"><span class="lbl">Combo</span><span x-text="'$'+item.priceCombo.toLocaleString('es-CO')"></span></div>
               </div>
@@ -385,6 +420,7 @@
       </template>
     </div>
   </div>
+
 
   <!-- MODAL DETALLE -->
   <div class="modal-bg" x-show="selectedItem" @click.self="selectedItem = null"
