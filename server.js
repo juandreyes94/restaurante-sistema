@@ -202,7 +202,7 @@ function getLocalIP() {
   return 'localhost';
 }
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   const ip = getLocalIP();
   console.log('\n╔════════════════════════════════════════╗');
