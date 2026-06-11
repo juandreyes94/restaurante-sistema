@@ -42,9 +42,11 @@
       color: rgba(255,255,255,0.9); font-size: 0.82rem; font-weight: 600;
       text-decoration: none; letter-spacing: 0.04em;
     }
-    .header-logo {
-      font-weight: 900; font-size: 1.3rem;
-      color: var(--cream); letter-spacing: 0.1em;
+    .header-logo img {
+      height: 36px;
+      width: auto;
+      display: block;
+      filter: brightness(0) saturate(100%) invert(93%) sepia(18%) saturate(300%) hue-rotate(330deg) brightness(105%);
     }
 
     /* ── WRAPPER ── */
@@ -273,7 +275,9 @@
         </svg>
         Inicio
       </a>
-      <span class="header-logo">CORAJE</span>
+      <div class="header-logo">
+        <img src="logo.png" alt="Coraje Fast Food" />
+      </div>
       <div style="width:60px"></div>
     </header>
 
@@ -411,6 +415,11 @@
           { id: 8,  name: 'Gaseosa', description: 'Coca-Cola, Sprite o Manzana — 350ml bien fría.', ingredients: 'Bebida gaseosa 350ml a elección.', price: 4500, category: 'Bebidas', emoji: '🥤', image: '' },
           { id: 9,  name: 'Limonada Natural', description: 'Natural con hielo y menta fresca.', ingredients: 'Limón natural, agua, azúcar, hielo, menta fresca.', price: 6500, category: 'Bebidas', emoji: '🍋', image: '' },
           { id: 10, name: 'Agua', description: 'Agua mineral 500ml.', ingredients: 'Agua mineral sin gas 500ml.', price: 3000, category: 'Bebidas', emoji: '💧', image: '' },
+          // ADICIONES
+          { id: 11, name: 'Queso extra', description: 'Porción adicional de queso cheddar fundido.', ingredients: 'Queso cheddar fundido.', price: 2000, category: 'Adiciones', emoji: '🧀', image: '' },
+          { id: 12, name: 'Tocineta extra', description: 'Tiras de tocineta crujiente adicionales.', ingredients: 'Tocineta crujiente.', price: 2500, category: 'Adiciones', emoji: '🥓', image: '' },
+          { id: 13, name: 'Aguacate', description: 'Aguacate fresco en rodajas.', ingredients: 'Aguacate fresco.', price: 2000, category: 'Adiciones', emoji: '🥑', image: '' },
+          { id: 14, name: 'Huevo', description: 'Huevo frito adicional.', ingredients: 'Huevo frito.', price: 1500, category: 'Adiciones', emoji: '🍳', image: '' },
         ],
 
         init() {},
