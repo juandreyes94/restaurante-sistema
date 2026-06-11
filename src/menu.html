@@ -27,7 +27,9 @@
       background: var(--orange);
       min-height: 100%;
       -webkit-tap-highlight-color: transparent;
+      scrollbar-width: none;
     }
+    ::-webkit-scrollbar { display: none; }
 
     /* ── HEADER ── */
     header {
@@ -76,6 +78,16 @@
     .cat-pill.active, .cat-pill:hover {
       background: #fff; border-color: #fff; color: var(--orange);
     }
+
+    /* ── SECTION TITLE (agrupador en Todos) ── */
+    .section-title {
+      font-weight: 900; font-size: 1.5rem;
+      color: #fff; text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.6rem 0 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .section-title:first-child { margin-top: 0; }
 
     /* ── CATEGORY TITLE ── */
     .cat-title {
@@ -294,45 +306,61 @@
   <div class="wrapper">
     <div class="cat-title" x-text="activeCategory === 'Todos' ? 'Menú' : activeCategory"></div>
 
-    <div class="product-list">
+    <!-- Títulos de sección -->
+    <template x-for="cat in (activeCategory === 'Todos' ? categoryList : [])" :key="'sec-'+cat">
+      <div>
+        <div class="section-title" x-text="cat"></div>
+        <div class="product-list" style="margin-bottom:0.5rem">
+          <template x-for="item in items.filter(i => i.category === cat)" :key="item.id">
+            <div class="product-card" @click="openDetail(item)">
+              <div class="product-img-wrap">
+                <template x-if="item.image"><img :src="item.image" :alt="item.name" loading="lazy" /></template>
+                <template x-if="!item.image"><div class="product-img-placeholder" x-text="item.emoji||'🍽️'"></div></template>
+              </div>
+              <div class="product-info">
+                <div class="product-name" x-text="item.name"></div>
+                <div class="product-desc" x-text="item.ingredients||item.description"></div>
+              </div>
+              <div class="product-prices">
+                <template x-if="item.priceCombo">
+                  <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end">
+                    <div class="price-solo"><span class="lbl">Solo</span><span x-text="'$'+item.price.toLocaleString('es-CO')"></span></div>
+                    <div class="price-combo"><span class="lbl">Combo</span><span x-text="'$'+item.priceCombo.toLocaleString('es-CO')"></span></div>
+                  </div>
+                </template>
+                <template x-if="!item.priceCombo">
+                  <div class="price-only" x-text="'$'+item.price.toLocaleString('es-CO')"></div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- Vista categoría individual -->
+    <div class="product-list" x-show="activeCategory !== 'Todos'" style="scrollbar-width:none">
       <template x-for="item in filteredItems" :key="item.id">
         <div class="product-card" @click="openDetail(item)">
-
-          <!-- Imagen -->
           <div class="product-img-wrap">
-            <template x-if="item.image">
-              <img :src="item.image" :alt="item.name" loading="lazy" />
-            </template>
-            <template x-if="!item.image">
-              <div class="product-img-placeholder" x-text="item.emoji || '🍽️'"></div>
-            </template>
+            <template x-if="item.image"><img :src="item.image" :alt="item.name" loading="lazy" /></template>
+            <template x-if="!item.image"><div class="product-img-placeholder" x-text="item.emoji||'🍽️'"></div></template>
           </div>
-
-          <!-- Info -->
           <div class="product-info">
             <div class="product-name" x-text="item.name"></div>
-            <div class="product-desc" x-text="item.ingredients || item.description"></div>
+            <div class="product-desc" x-text="item.ingredients||item.description"></div>
           </div>
-
-          <!-- Precios -->
           <div class="product-prices">
             <template x-if="item.priceCombo">
               <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:flex-end">
-                <div class="price-solo">
-                  <span class="lbl">Solo</span>
-                  <span x-text="'$' + item.price.toLocaleString('es-CO')"></span>
-                </div>
-                <div class="price-combo">
-                  <span class="lbl">Combo</span>
-                  <span x-text="'$' + item.priceCombo.toLocaleString('es-CO')"></span>
-                </div>
+                <div class="price-solo"><span class="lbl">Solo</span><span x-text="'$'+item.price.toLocaleString('es-CO')"></span></div>
+                <div class="price-combo"><span class="lbl">Combo</span><span x-text="'$'+item.priceCombo.toLocaleString('es-CO')"></span></div>
               </div>
             </template>
             <template x-if="!item.priceCombo">
-              <div class="price-only" x-text="'$' + item.price.toLocaleString('es-CO')"></div>
+              <div class="price-only" x-text="'$'+item.price.toLocaleString('es-CO')"></div>
             </template>
           </div>
-
         </div>
       </template>
     </div>
@@ -427,10 +455,40 @@
         get categories() {
           return ['Todos', ...new Set(this.items.map(i => i.category))];
         },
+        get categoryList() {
+          return [...new Set(this.items.map(i => i.category))];
+        },
         get filteredItems() {
           return this.activeCategory === 'Todos'
             ? this.items
             : this.items.filter(i => i.category === this.activeCategory);
+        },
+        get groupedItems() {
+          if (this.activeCategory !== 'Todos') {
+            return [{ category: this.activeCategory, items: this.filteredItems }];
+          }
+          const cats = [...new Set(this.items.map(i => i.category))];
+          return cats.map(cat => ({
+            category: cat,
+            items: this.items.filter(i => i.category === cat)
+          }));
+        },
+        get flatList() {
+          const result = [];
+          if (this.activeCategory === 'Todos') {
+            const cats = [...new Set(this.items.map(i => i.category))];
+            cats.forEach(cat => {
+              result.push({ type: 'title', label: cat, _key: 'title-' + cat });
+              this.items.filter(i => i.category === cat).forEach(item => {
+                result.push({ ...item, type: 'item', _key: 'item-' + item.id });
+              });
+            });
+          } else {
+            this.items.filter(i => i.category === this.activeCategory).forEach(item => {
+              result.push({ ...item, type: 'item', _key: 'item-' + item.id });
+            });
+          }
+          return result;
         },
         openDetail(item) { this.selectedItem = item; },
       };
