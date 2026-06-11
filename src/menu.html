@@ -110,23 +110,35 @@
       overflow: hidden; cursor: pointer;
       box-shadow: 0 2px 16px rgba(0,0,0,0.1);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
-      min-height: 130px;
+      min-height: 150px;
     }
     .product-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.15); }
     .product-card:active { transform: scale(0.984); box-shadow: 0 1px 8px rgba(0,0,0,0.1); }
 
-    /* imagen */
+    /* imagen — proporción cuadrada fija */
     .product-img-wrap {
-      flex-shrink: 0; width: 110px;
-      background: var(--gray); position: relative; overflow: hidden;
+      flex-shrink: 0;
+      width: 150px;
+      height: 150px;
+      background: #ede8e3;
+      position: relative;
+      overflow: hidden;
+      align-self: center;
+      margin: 6px 0 6px 6px;
+      border-radius: 14px;
     }
     .product-img-wrap img {
-      width: 100%; height: 100%; object-fit: cover; display: block;
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
       transition: transform 0.3s ease;
     }
-    .product-card:hover .product-img-wrap img { transform: scale(1.04); }
+    .product-card:hover .product-img-wrap img { transform: scale(1.05); }
     .product-img-placeholder {
-      width: 100%; height: 100%; min-height: 130px;
+      width: 100%; height: 100%;
       background: #ede8e3;
       display: flex; align-items: center; justify-content: center;
       font-size: 3rem;
@@ -152,8 +164,8 @@
     .product-prices {
       flex-shrink: 0; display: flex; flex-direction: column;
       align-items: flex-end; justify-content: center;
-      gap: 0.4rem; padding: 0.75rem 0.7rem 0.75rem 0.3rem;
-      width: 90px;
+      gap: 0.4rem; padding: 0.75rem 0.65rem 0.75rem 0.3rem;
+      width: 84px;
     }
     .price-solo {
       display: flex; flex-direction: column; align-items: center;
@@ -313,10 +325,11 @@
         <div class="product-list" style="margin-bottom:0.5rem">
           <template x-for="item in items.filter(i => i.category === cat)" :key="item.id">
             <div class="product-card" @click="openDetail(item)">
-              <div class="product-img-wrap">
-                <template x-if="item.image"><img :src="item.image" :alt="item.name" loading="lazy" /></template>
-                <template x-if="!item.image"><div class="product-img-placeholder" x-text="item.emoji||'🍽️'"></div></template>
-              </div>
+              <template x-if="item.image">
+                <div class="product-img-wrap">
+                  <img :src="item.image" :alt="item.name" loading="lazy" />
+                </div>
+              </template>
               <div class="product-info">
                 <div class="product-name" x-text="item.name"></div>
                 <div class="product-desc" x-text="item.ingredients||item.description"></div>
@@ -342,10 +355,11 @@
     <div class="product-list" x-show="activeCategory !== 'Todos'" style="scrollbar-width:none">
       <template x-for="item in filteredItems" :key="item.id">
         <div class="product-card" @click="openDetail(item)">
-          <div class="product-img-wrap">
-            <template x-if="item.image"><img :src="item.image" :alt="item.name" loading="lazy" /></template>
-            <template x-if="!item.image"><div class="product-img-placeholder" x-text="item.emoji||'🍽️'"></div></template>
-          </div>
+          <template x-if="item.image">
+            <div class="product-img-wrap">
+              <img :src="item.image" :alt="item.name" loading="lazy" />
+            </div>
+          </template>
           <div class="product-info">
             <div class="product-name" x-text="item.name"></div>
             <div class="product-desc" x-text="item.ingredients||item.description"></div>
@@ -433,21 +447,47 @@
         selectedItem: null,
 
         items: [
-          { id: 1,  name: 'Chuzo desgranado de panceta', description: 'El favorito de la casa, con panceta caramelizada y nuestra salsa secreta.', ingredients: 'Panceta caramelizada, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 29500, priceCombo: 37500, category: 'Chuzos', emoji: '🍢', image: '' },
-          { id: 2,  name: 'Chuzo desgranado', description: 'Disponible en res, pollo o mixto. Lleno de sabor y textura.', ingredients: 'Res / Pollo / Mixto (res y pollo), batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 33900, priceCombo: 42900, category: 'Chuzos', emoji: '🍢', image: '' },
-          { id: 3,  name: 'Hamburguesa Coraje', description: 'Nuestra clásica con carne 100% res y la salsa especial de la casa.', ingredients: 'Carne 100% res, pan brioche, lechuga, tomate, queso cheddar, cebolla morada, salsa de la casa.', price: 22000, priceCombo: 30000, category: 'Hamburguesas', emoji: '🍔', image: '' },
-          { id: 4,  name: 'Hamburguesa BBQ', description: 'Para los amantes del ahumado con doble carne y tocino crujiente.', ingredients: 'Doble carne res, pan brioche, tocino crujiente, aros de cebolla, queso cheddar, salsa BBQ ahumada.', price: 26000, priceCombo: 34000, category: 'Hamburguesas', emoji: '🍔', image: '' },
-          { id: 5,  name: 'Hamburguesa de Pollo', description: 'Pechuga apanada y crujiente con mayonesa de ajo y aguacate fresco.', ingredients: 'Pechuga de pollo apanada, pan brioche, mayonesa de ajo, aguacate, lechuga, tomate.', price: 24000, priceCombo: 32000, category: 'Hamburguesas', emoji: '🍔', image: '' },
-          { id: 6,  name: 'Papas Fritas', description: 'Crujientes por fuera, suaves por dentro.', ingredients: 'Papa criolla frita, sal marina, aderezo a elección.', price: 9000, category: 'Papas', emoji: '🍟', image: '' },
-          { id: 7,  name: 'Papas con Cheddar', description: 'Cargadas con queso cheddar fundido y tocineta crujiente.', ingredients: 'Papa frita, queso cheddar fundido, tocineta crujiente, cebollín.', price: 13000, category: 'Papas', emoji: '🍟', image: '' },
-          { id: 8,  name: 'Gaseosa', description: 'Coca-Cola, Sprite o Manzana — 350ml bien fría.', ingredients: 'Bebida gaseosa 350ml a elección.', price: 4500, category: 'Bebidas', emoji: '🥤', image: '' },
-          { id: 9,  name: 'Limonada Natural', description: 'Natural con hielo y menta fresca.', ingredients: 'Limón natural, agua, azúcar, hielo, menta fresca.', price: 6500, category: 'Bebidas', emoji: '🍋', image: '' },
-          { id: 10, name: 'Agua', description: 'Agua mineral 500ml.', ingredients: 'Agua mineral sin gas 500ml.', price: 3000, category: 'Bebidas', emoji: '💧', image: '' },
-          // ADICIONES
-          { id: 11, name: 'Queso extra', description: 'Porción adicional de queso cheddar fundido.', ingredients: 'Queso cheddar fundido.', price: 2000, category: 'Adiciones', emoji: '🧀', image: '' },
-          { id: 12, name: 'Tocineta extra', description: 'Tiras de tocineta crujiente adicionales.', ingredients: 'Tocineta crujiente.', price: 2500, category: 'Adiciones', emoji: '🥓', image: '' },
-          { id: 13, name: 'Aguacate', description: 'Aguacate fresco en rodajas.', ingredients: 'Aguacate fresco.', price: 2000, category: 'Adiciones', emoji: '🥑', image: '' },
-          { id: 14, name: 'Huevo', description: 'Huevo frito adicional.', ingredients: 'Huevo frito.', price: 1500, category: 'Adiciones', emoji: '🍳', image: '' },
+          // ── CHUZOS ──
+          { id:1,  name:'Chuzo Desgranado de Panceta',    description:'Panceta caramelizada, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.',                                                                        price:32900, priceCombo:41900, category:'Chuzos',       image:'img/chuzo-desgranado-de-panceta.jpg' },
+          { id:2,  name:'Chuzo Desgranado',               description:'RES, POLLO, MIXTO (res y pollo), batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.',                                                              price:35900, priceCombo:44900, category:'Chuzos',       image:'img/chuzo-desgranado.jpg' },
+          { id:3,  name:'Chuzo Desgranado Pulled Pork',   description:'Pulled pork en salsa BBQ de lulo, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.',                                                             price:33900, priceCombo:42900, category:'Chuzos',       image:'img/chuzo-desgranado-pulled-pork.jpg' },
+          // ── HAMBURGUESAS ──
+          { id:4,  name:'Hamburguesa Coraje',             description:'Pan brioche, 150 grs de carne premium, queso philadelphia, mermelada de tomate, tocineta, aros de cebolla apanados, vegetales, salsa de la casa.',                price:32900, priceCombo:41900, category:'Hamburguesas',  image:'img/hamburguesa-coraje.jpg' },
+          { id:5,  name:'Hamburguesa Americana',          description:'Pan brioche, 150 grs de carne premium, queso americano, tocineta, vegetales, salsa BBQ, salsa de la casa.',                                                        price:28900, priceCombo:37900, category:'Hamburguesas',  image:'img/hamburguesa-americana.jpg' },
+          { id:6,  name:'Hamburguesa Mocca',              description:'Pan brioche, mayonesa de café, carne premium, queso americano, cebolla en reducción de café y ron, queso crema, tocineta.',                                        price:33900, priceCombo:42900, category:'Hamburguesas',  image:'img/hamburguesa-mocca.jpg' },
+          { id:7,  name:'Hamburguesa Hawai',              description:'Pan brioche, 150 grs de carne premium, queso asado, piña calada, tocineta, vegetales, salsa BBQ, salsa de la casa.',                                               price:33900, priceCombo:42900, category:'Hamburguesas',  image:'img/hamburguesa-hawai.jpg' },
+          { id:8,  name:'Hamburguesa Gaucha',             description:'Pan brioche, 150 grs de carne premium, queso mozzarella, chorizo artesanal, guacamole, pico de gallo, vegetales, salsa de la casa.',                              price:33900, priceCombo:42900, category:'Hamburguesas',  image:'img/hamburguesa-gaucha.jpg' },
+          { id:9,  name:'Hamburguesa Marake',             description:'Pan brioche, 150 grs carne premium, queso asado, dip cremoso de maracuyá, tocineta, vegetales, salsa de la casa.',                                                 price:34900, priceCombo:43900, category:'Hamburguesas',  image:'img/hamburguesa-marake.jpg' },
+          // ── PAPAS ──
+          { id:10, name:'Papas Coraje',                   description:'Papas a la francesa (280 gr), salchicha ranchera, carne desmechada, queso mozzarella, maicitos, guacamole, pico de gallo, salsa de la casa.',                     price:33900,                    category:'Papas',        image:'img/papas-coraje.jpg' },
+          // ── PERROS ──
+          { id:11, name:'Perro Coraje',                   description:'Pan brioche, salchicha ranchera o americana, queso mozzarella, tocineta, carne desmechada, salsa de la casa.',                                                     price:28900, priceCombo:37900, category:'Perros',        image:'img/perro-coraje.jpg' },
+          { id:12, name:'Perro Clásico',                  description:'Pan brioche, salchicha ranchera o americana, queso americano, tocineta, salsa de tomate, salsa BBQ.',                                                              price:25900, priceCombo:34900, category:'Perros',        image:'img/perro-clasico.jpg' },
+          { id:13, name:'Perro Chancho',                  description:'Pan brioche, salchicha ranchera o americana, chicharrón crujiente, queso mozzarella, salsa BBQ, guacamole.',                                                       price:26900, priceCombo:35900, category:'Perros',        image:'img/perro-chancho.jpg' },
+          { id:14, name:'Perro Inmaduro',                 description:'Pan brioche, salchicha ranchera o americana, queso philadelphia, maduro calado, tocineta, salsa crema leña.',                                                      price:26900, priceCombo:35900, category:'Perros',        image:'img/perro-inmaduro.jpg' },
+          { id:15, name:'Perro Granjero',                 description:'Pan brioche, salchicha ranchera o americana, queso mozzarella, maicitos, tocineta, salsa de maíz dulce.',                                                          price:25900, priceCombo:34900, category:'Perros',        image:'img/perro-granjero.jpg' },
+          { id:16, name:'Perro Chingón',                  description:'Pan brioche, salchicha ranchera o americana, queso mozzarella, tocineta, pico de gallo, guacamole, salsa BBQ.',                                                    price:26900, priceCombo:35900, category:'Perros',        image:'img/perro-chingon.jpg' },
+          { id:17, name:'Perro Hawai',                    description:'Pan brioche, salchicha ranchera o americana, queso mozzarella, tocineta, piña calada, salsa BBQ.',                                                                  price:26900, priceCombo:35900, category:'Perros',        image:'img/perro-hawai.jpg' },
+          { id:18, name:'Perro Perla del Otún',           description:'Pan brioche, salchicha americana, queso cuajada, huevos de codorniz, ripio de papa, tocineta, salsa mora, salsa rosada de la casa.',                               price:24900, priceCombo:33900, category:'Perros',        image:'img/perro-perla-del-otun.jpg' },
+          { id:19, name:'Perro Maradoniano',              description:'Pan brioche, chorizo artesanal, pico de gallo, guacamole, salsa de la casa.',                                                                                       price:22900, priceCombo:31900, category:'Perros',        image:'img/perro-maradoniano.jpg' },
+          // ── BEBIDAS (solo texto) ──
+          { id:20, name:'Coca-Cola / Postobón',           description:'Gaseosa 350ml bien fría a elección.',                                                                                                                              price:5900,                     category:'Bebidas',      emoji:'🥤', image:'' },
+          { id:21, name:'Agua Manantial',                 description:'Agua natural 350ml.',                                                                                                                                               price:5900,                     category:'Bebidas',      emoji:'💧', image:'' },
+          { id:22, name:'Tamarindo Michelada',            description:'Refrescante michelada sabor tamarindo.',                                                                                                                            price:7900,                     category:'Bebidas',      emoji:'🍹', image:'' },
+          { id:23, name:'Soda Michelada',                 description:'Michelada con soda.',                                                                                                                                               price:7900,                     category:'Bebidas',      emoji:'🍹', image:'' },
+          { id:24, name:'Sodas Saborizadas',              description:'Sodas en diferentes sabores.',                                                                                                                                      price:12000,                    category:'Bebidas',      emoji:'🥤', image:'' },
+          { id:25, name:'Hatsu',                          description:'Bebida Hatsu natural o de frutas.',                                                                                                                                 price:8500,                     category:'Bebidas',      emoji:'🫖', image:'' },
+          { id:26, name:'Cerveza Sol',                    description:'Cerveza Sol 330ml.',                                                                                                                                                price:8500,                     category:'Bebidas',      emoji:'🍺', image:'' },
+          { id:27, name:'Cerveza 3 Cordilleras',          description:'Cerveza artesanal 3 Cordilleras.',                                                                                                                                  price:9000,                     category:'Bebidas',      emoji:'🍺', image:'' },
+          { id:28, name:'Cerveza Corona',                 description:'Cerveza Corona 330ml.',                                                                                                                                             price:10000,                    category:'Bebidas',      emoji:'🍺', image:'' },
+          // ── ADICIONES (solo texto) ──
+          { id:29, name:'Carne Premium',                  description:'Porción adicional de carne premium.',                                                                                                                               price:11000,                    category:'Adiciones',    emoji:'🥩', image:'' },
+          { id:30, name:'Queso Asado',                    description:'Porción de queso asado.',                                                                                                                                           price:4900,                     category:'Adiciones',    emoji:'🧀', image:'' },
+          { id:31, name:'Queso Philadelphia',             description:'Porción de queso philadelphia.',                                                                                                                                    price:4900,                     category:'Adiciones',    emoji:'🧀', image:'' },
+          { id:32, name:'Queso Mozzarella',               description:'Porción de queso mozzarella.',                                                                                                                                      price:3900,                     category:'Adiciones',    emoji:'🧀', image:'' },
+          { id:33, name:'Queso Americano',                description:'Porción de queso americano.',                                                                                                                                       price:3900,                     category:'Adiciones',    emoji:'🧀', image:'' },
+          { id:34, name:'Porción Papas a la Francesa',   description:'Porción de papas a la francesa.',                                                                                                                                   price:7900,                     category:'Adiciones',    emoji:'🍟', image:'' },
+          { id:35, name:'Huevos de Codorniz',             description:'Porción de huevos de codorniz.',                                                                                                                                    price:5000,                     category:'Adiciones',    emoji:'🥚', image:'' },
         ],
 
         init() {},
