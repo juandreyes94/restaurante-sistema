@@ -80,13 +80,19 @@
       color: #fff;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      padding: 0.5rem 1.1rem 0.4rem;
+      padding: 0.5rem 0.9rem 0.4rem;
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     /* ── LISTA PRODUCTOS ── */
     .product-list {
       display: flex; flex-direction: column; gap: 0.75rem;
       padding: 0 0.9rem 7rem;
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     /* ── TARJETA ── */
@@ -237,9 +243,33 @@
     }
 
     /* detalle producto */
-    .detail-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 14px; margin-bottom: 1rem; }
-    .detail-name { font-weight: 900; font-size: 1.4rem; color: var(--dark); margin-bottom: 0.3rem; }
-    .detail-desc { color: var(--muted); font-size: 0.87rem; line-height: 1.55; margin-bottom: 1rem; }
+    .detail-img-wrap {
+      margin: -1.5rem -1.5rem 1.1rem;
+      border-radius: 24px 24px 0 0;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      background: #f0ebe6;
+    }
+    .detail-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-img-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 5rem;
+    }
+    .detail-name { font-weight: 900; font-size: 1.45rem; color: var(--dark); margin-bottom: 0.4rem; line-height: 1.2; }
+    .detail-desc { color: #555; font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.6rem; }
+    .detail-ingredients-title {
+      font-weight: 700; font-size: 0.7rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.35rem;
+    }
+    .detail-ingredients {
+      color: #444; font-size: 0.83rem; line-height: 1.55;
+      margin-bottom: 1rem;
+      padding: 0.7rem 0.85rem;
+      background: var(--gray);
+      border-radius: 10px;
+    }
 
     /* opciones solo/combo en detalle */
     .detail-options { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
@@ -436,12 +466,24 @@
     <div class="modal-box" x-show="selectedItem">
       <div class="modal-handle"></div>
 
-      <template x-if="selectedItem?.image">
-        <img :src="selectedItem.image" :alt="selectedItem.name" class="detail-img" />
-      </template>
+      <div class="detail-img-wrap">
+        <template x-if="selectedItem?.image">
+          <img :src="selectedItem.image" :alt="selectedItem.name" class="detail-img" />
+        </template>
+        <template x-if="!selectedItem?.image">
+          <div class="detail-img-placeholder" x-text="selectedItem?.emoji || '🍽️'"></div>
+        </template>
+      </div>
 
       <div class="detail-name" x-text="selectedItem?.name"></div>
-      <div class="detail-desc" x-text="selectedItem?.description"></div>
+      <div class="detail-desc" x-show="selectedItem?.description" x-text="selectedItem?.description"></div>
+
+      <template x-if="selectedItem?.ingredients">
+        <div>
+          <div class="detail-ingredients-title">Ingredientes</div>
+          <div class="detail-ingredients" x-text="selectedItem.ingredients"></div>
+        </div>
+      </template>
 
       <!-- Opciones solo / combo -->
       <div class="detail-options" x-show="selectedItem?.priceCombo">
@@ -552,19 +594,16 @@
 
         items: [
           // CHUZOS
-          { id: 1,  name: 'Chuzo desgranado de panceta', description: 'Panceta caramelizada, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 29500, priceCombo: 37500, category: 'Chuzos', image: '' },
-          { id: 2,  name: 'Chuzo desgranado', description: 'RES, POLLO, MIXTO (res y pollo), batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 33900, priceCombo: 42900, category: 'Chuzos', image: '' },
-          // HAMBURGUESAS
-          { id: 3,  name: 'Hamburguesa Coraje', description: 'Carne 100% res, lechuga, tomate, queso cheddar y salsa especial de la casa.', price: 22000, priceCombo: 30000, category: 'Hamburguesas', image: '' },
-          { id: 4,  name: 'Hamburguesa BBQ', description: 'Doble carne, tocino crujiente, aros de cebolla y salsa BBQ ahumada.', price: 26000, priceCombo: 34000, category: 'Hamburguesas', image: '' },
-          { id: 5,  name: 'Hamburguesa de Pollo', description: 'Pechuga apanada, mayonesa de ajo, aguacate y ensalada fresca.', price: 24000, priceCombo: 32000, category: 'Hamburguesas', image: '' },
-          // PAPAS
-          { id: 6,  name: 'Papas Fritas', description: 'Papas crujientes con sal marina y el aderezo que elijas.', price: 9000, category: 'Papas', image: '' },
-          { id: 7,  name: 'Papas con Cheddar', description: 'Papas cargadas con queso cheddar fundido y tocineta crujiente.', price: 13000, category: 'Papas', image: '' },
-          // BEBIDAS
-          { id: 8,  name: 'Gaseosa', description: 'Coca-Cola, Sprite o Manzana — 350ml bien fría.', price: 4500, category: 'Bebidas', image: '' },
-          { id: 9,  name: 'Limonada Natural', description: 'Limonada natural con hielo y menta fresca.', price: 6500, category: 'Bebidas', image: '' },
-          { id: 10, name: 'Agua', description: 'Agua mineral 500ml.', price: 3000, category: 'Bebidas', image: '' },
+          { id: 1,  name: 'Chuzo desgranado de panceta', description: 'El favorito de la casa, con panceta caramelizada y nuestra salsa secreta.', ingredients: 'Panceta caramelizada, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 29500, priceCombo: 37500, category: 'Chuzos', emoji: '🍢', image: '' },
+          { id: 2,  name: 'Chuzo desgranado', description: 'Disponible en res, pollo o mixto. Lleno de sabor y textura.', ingredients: 'Res / Pollo / Mixto (res y pollo), batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.', price: 33900, priceCombo: 42900, category: 'Chuzos', emoji: '🍢', image: '' },
+          { id: 3,  name: 'Hamburguesa Coraje', description: 'Nuestra clásica con carne 100% res y la salsa especial de la casa.', ingredients: 'Carne 100% res, pan brioche, lechuga, tomate, queso cheddar, cebolla morada, salsa de la casa.', price: 22000, priceCombo: 30000, category: 'Hamburguesas', emoji: '🍔', image: '' },
+          { id: 4,  name: 'Hamburguesa BBQ', description: 'Para los amantes del ahumado con doble carne y tocino crujiente.', ingredients: 'Doble carne res, pan brioche, tocino crujiente, aros de cebolla, queso cheddar, salsa BBQ ahumada.', price: 26000, priceCombo: 34000, category: 'Hamburguesas', emoji: '🍔', image: '' },
+          { id: 5,  name: 'Hamburguesa de Pollo', description: 'Pechuga apanada y crujiente con mayonesa de ajo y aguacate fresco.', ingredients: 'Pechuga de pollo apanada, pan brioche, mayonesa de ajo, aguacate, lechuga, tomate.', price: 24000, priceCombo: 32000, category: 'Hamburguesas', emoji: '🍔', image: '' },
+          { id: 6,  name: 'Papas Fritas', description: 'Crujientes por fuera, suaves por dentro. Con el aderezo que elijas.', ingredients: 'Papa criolla frita, sal marina, aderezo a elección.', price: 9000, category: 'Papas', emoji: '🍟', image: '' },
+          { id: 7,  name: 'Papas con Cheddar', description: 'Papas cargadas con queso cheddar fundido y tocineta crujiente.', ingredients: 'Papa frita, queso cheddar fundido, tocineta crujiente, cebollín.', price: 13000, category: 'Papas', emoji: '🍟', image: '' },
+          { id: 8,  name: 'Gaseosa', description: 'Coca-Cola, Sprite o Manzana — 350ml bien fría.', ingredients: 'Bebida gaseosa 350ml.', price: 4500, category: 'Bebidas', emoji: '🥤', image: '' },
+          { id: 9,  name: 'Limonada Natural', description: 'Limonada natural con hielo y menta fresca.', ingredients: 'Limón natural, agua, azúcar, hielo, menta fresca.', price: 6500, category: 'Bebidas', emoji: '🍋', image: '' },
+          { id: 10, name: 'Agua', description: 'Agua mineral 500ml.', ingredients: 'Agua mineral sin gas 500ml.', price: 3000, category: 'Bebidas', emoji: '💧', image: '' },
         ],
 
         init() {
