@@ -6,7 +6,7 @@
   <title>Comandas — Cocina</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,6 +18,7 @@
       --border: rgba(245,237,216,0.1);
       --muted:  rgba(245,237,216,0.4);
       --green:  #22c55e;
+      --amber:  #f59e0b;
     }
     body {
       font-family: 'DM Sans', sans-serif;
@@ -52,10 +53,56 @@
     }
     .pending-count span { color: var(--red); }
 
+    /* Toolbar (filtros y orden) */
+    .toolbar {
+      position: sticky; top: 58px; z-index: 20;
+      background: rgba(14,8,4,0.92);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+      padding: 0.65rem 1.25rem;
+    }
+    .search-box {
+      display: flex; align-items: center; gap: 0.45rem;
+      background: rgba(245,237,216,0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.7rem;
+      flex: 1; min-width: 160px; max-width: 260px;
+    }
+    .search-box input {
+      background: none; border: none; outline: none;
+      color: var(--cream); font-size: 0.85rem; width: 100%;
+    }
+    .search-box input::placeholder { color: var(--muted); }
+    .search-box .clear-x {
+      cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1;
+      background: none; border: none;
+    }
+    .sort-btn {
+      display: flex; align-items: center; gap: 0.4rem;
+      background: rgba(245,237,216,0.05);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      border-radius: 8px;
+      padding: 0.45rem 0.85rem;
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    }
+    .sort-btn:hover { border-color: var(--red); }
+    .toolbar-spacer { flex: 1; }
+    .legend { display: flex; align-items: center; gap: 0.9rem; font-size: 0.72rem; color: var(--muted); }
+    .legend span { display: flex; align-items: center; gap: 0.35rem; }
+    .legend .dot { width: 9px; height: 9px; border-radius: 2px; }
+    .legend .dot.ok   { background: var(--green); }
+    .legend .dot.warn { background: var(--amber); }
+    .legend .dot.late { background: var(--red); }
+
     /* Empty state */
     .empty-state {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 60vh; color: var(--muted); text-align: center; gap: 0.75rem;
+      min-height: 55vh; color: var(--muted); text-align: center; gap: 0.75rem;
+      grid-column: 1 / -1;
     }
     .empty-state .icon { font-size: 3.5rem; }
     .empty-state p { font-size: 1.1rem; }
@@ -72,22 +119,31 @@
     .comanda-card {
       background: var(--card);
       border: 1px solid var(--border);
+      border-left: 5px solid var(--green);
       border-radius: 14px;
       overflow: hidden;
       animation: slideIn 0.4s ease both;
-      transition: border-color 0.2s;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
-    .comanda-card.new-order {
-      border-color: var(--red);
-      animation: slideIn 0.4s ease both, pulse-border 1s ease 3;
+    /* Alertas de tiempo */
+    .comanda-card.age-warn { border-left-color: var(--amber); }
+    .comanda-card.age-late {
+      border-left-color: var(--red);
+      box-shadow: 0 0 0 1px rgba(212,43,36,0.4), 0 6px 22px rgba(212,43,36,0.25);
+      animation: slideIn 0.4s ease both, late-pulse 1.4s ease-in-out infinite;
     }
+    @keyframes late-pulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(212,43,36,0.35), 0 6px 22px rgba(212,43,36,0.18); }
+      50%      { box-shadow: 0 0 0 2px rgba(212,43,36,0.7),  0 8px 28px rgba(212,43,36,0.4); }
+    }
+    .comanda-card.new-order { animation: slideIn 0.4s ease both, pulse-border 1s ease 3; }
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(20px) scale(0.97); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes pulse-border {
-      0%, 100% { border-color: var(--red); }
-      50%       { border-color: rgba(212,43,36,0.3); }
+      0%, 100% { border-left-color: var(--red); }
+      50%       { border-left-color: rgba(212,43,36,0.3); }
     }
 
     .card-header {
@@ -96,25 +152,40 @@
       display: flex; align-items: center; justify-content: space-between;
     }
     .mesa-label { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; }
-    .order-meta { text-align: right; }
-    .order-id { font-size: 0.75rem; opacity: 0.8; }
-    .order-time { font-size: 0.8rem; font-weight: 600; }
+    .order-meta { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
+    .order-id { font-size: 0.72rem; opacity: 0.8; }
+    .order-time {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.05rem; letter-spacing: 0.04em;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: rgba(0,0,0,0.22); padding: 0.1rem 0.5rem; border-radius: 6px;
+    }
 
     .card-body { padding: 1rem; }
 
     /* Items list */
     .item-row {
       display: flex; align-items: baseline; gap: 0.5rem;
-      padding: 0.35rem 0;
+      padding: 0.4rem 0;
       border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
+      font-size: 0.92rem;
     }
     .item-row:last-child { border-bottom: none; }
     .item-qty {
       font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem;
-      color: var(--red); min-width: 24px;
+      color: var(--red); min-width: 26px;
     }
     .item-name { flex: 1; font-weight: 500; }
+    .item-price { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
+
+    /* Total */
+    .card-total {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 0.6rem; padding-top: 0.6rem;
+      border-top: 1px dashed var(--border);
+    }
+    .card-total .lbl { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.06em; font-size: 1rem; color: var(--muted); }
+    .card-total .val { font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; color: var(--cream); font-variant-numeric: tabular-nums; }
 
     /* Cliente y notas */
     .card-meta {
@@ -148,15 +219,15 @@
       flex: 0 0 auto;
       padding: 0.75rem 0.9rem;
       background: transparent;
-      border: 1.5px solid #f59e0b;
-      color: #f59e0b;
+      border: 1.5px solid var(--amber);
+      color: var(--amber);
       border-radius: 8px;
       font-family: 'Bebas Neue', sans-serif;
       font-size: 1rem; letter-spacing: 0.1em;
       cursor: pointer;
       transition: background 0.2s, color 0.2s;
     }
-    .invoice-btn:hover { background: #f59e0b; color: #000; }
+    .invoice-btn:hover { background: var(--amber); color: #000; }
     .invoice-btn.done { border-color: var(--green); color: var(--green); cursor: default; }
     .invoice-form {
       display: none; gap: 0.4rem; margin-top: 0.5rem;
@@ -210,6 +281,11 @@
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 520px) {
+      .toolbar { top: 54px; }
+      .legend { display: none; }
+    }
   </style>
 </head>
 
@@ -231,6 +307,24 @@
       <button onclick="clearCompleted()" style="font-size:0.72rem;color:var(--muted);background:none;border:none;cursor:pointer;margin-top:0.2rem">Limpiar completados</button>
     </div>
   </header>
+
+  <!-- TOOLBAR: filtros y orden -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span style="color:var(--muted)">🔎</span>
+      <input type="text" id="filterMesa" placeholder="Filtrar por mesa..." oninput="onFilterInput(this.value)" />
+      <button class="clear-x" id="clearFilter" onclick="clearFilter()" style="display:none">×</button>
+    </div>
+    <button class="sort-btn" id="sortBtn" onclick="toggleSort()">
+      <span id="sortIcon">🕒</span><span id="sortLabel">Recientes primero</span>
+    </button>
+    <div class="toolbar-spacer"></div>
+    <div class="legend">
+      <span><span class="dot ok"></span>&lt; 5 min</span>
+      <span><span class="dot warn"></span>5–10 min</span>
+      <span><span class="dot late"></span>&gt; 10 min</span>
+    </div>
+  </div>
 
   <!-- ORDERS -->
   <div class="orders-grid" id="ordersGrid">
@@ -261,6 +355,14 @@
     let ws;
     let reconnectTimer;
 
+    // Estado de filtros / orden
+    let filterMesa = '';
+    let sortOrder = 'recent'; // 'recent' | 'old'
+
+    // Umbrales de alerta (minutos)
+    const WARN_MIN = 5;
+    const LATE_MIN = 10;
+
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       ws = new WebSocket(`${proto}://${location.host}`);
@@ -275,9 +377,11 @@
         const msg = JSON.parse(e.data);
         if (msg.type === 'init') {
           msg.orders.forEach(o => addOrder(o, false));
+          applyFilterSort();
           updateCount();
         } else if (msg.type === 'new_order') {
           addOrder(msg.order, true);
+          applyFilterSort();
           playBell();
           showToast(`🔔 Nuevo pedido — Mesa ${msg.order.mesa}`);
           updateCount();
@@ -302,11 +406,20 @@
       document.getElementById('statusLabel').textContent = label;
     }
 
+    function fmtCOP(n) {
+      return '$' + Number(n || 0).toLocaleString('es-CO');
+    }
+
+    // Cronómetro: tiempo transcurrido en MM:SS (o Xs)
     function formatTime(ts) {
-      const now = Date.now();
-      const diff = Math.floor((now - ts) / 1000);
-      if (diff < 60) return `Hace ${diff}s`;
-      return `Hace ${Math.floor(diff / 60)}min`;
+      const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+      const m = Math.floor(diff / 60);
+      const s = diff % 60;
+      return m > 0 ? `${m}:${String(s).padStart(2, '0')} min` : `${s}s`;
+    }
+
+    function orderTotal(order) {
+      return (order.items || []).reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0);
     }
 
     function addOrder(order, isNew) {
@@ -318,13 +431,23 @@
       const card = document.createElement('div');
       card.className = 'comanda-card' + (isNew ? ' new-order' : '');
       card.id = 'order-' + order.id;
+      card.dataset.id = order.id;
 
-      const itemsHTML = order.items.map(i =>
-        `<div class="item-row">
+      const itemsHTML = order.items.map(i => {
+        const line = (Number(i.price) || 0) * (Number(i.qty) || 0);
+        return `<div class="item-row">
           <span class="item-qty">${i.qty}×</span>
           <span class="item-name">${i.name}</span>
-        </div>`
-      ).join('');
+          ${line > 0 ? `<span class="item-price">${fmtCOP(line)}</span>` : ''}
+        </div>`;
+      }).join('');
+
+      const total = orderTotal(order);
+      const totalHTML = total > 0 ? `
+        <div class="card-total">
+          <span class="lbl">Total</span>
+          <span class="val">${fmtCOP(total)}</span>
+        </div>` : '';
 
       const metaHTML = (order.nombre || order.notas) ? `
         <div class="card-meta">
@@ -337,11 +460,12 @@
           <span class="mesa-label">Mesa ${order.mesa}</span>
           <div class="order-meta">
             <div class="order-id">#${order.id}</div>
-            <div class="order-time">${formatTime(order.timestamp)}</div>
+            <div class="order-time">⏱ <span class="time-val">${formatTime(order.timestamp)}</span></div>
           </div>
         </div>
         <div class="card-body">
           <div class="items-list">${itemsHTML}</div>
+          ${totalHTML}
           ${metaHTML}
           <div class="btn-row">
             <button class="complete-btn" onclick="completeOrder(${order.id})">✓ Completado</button>
@@ -353,13 +477,77 @@
           </div>
         </div>`;
 
-      grid.prepend(card);
+      grid.appendChild(card);
+      updateCardAge(card, order);
+    }
 
-      // Actualizar tiempos cada 30s
-      setInterval(() => {
-        const timeEl = card.querySelector('.order-time');
-        if (timeEl) timeEl.textContent = formatTime(order.timestamp);
-      }, 30000);
+    // Aplica clase de urgencia y actualiza el cronómetro de una tarjeta
+    function updateCardAge(card, order) {
+      const mins = (Date.now() - order.timestamp) / 60000;
+      card.classList.toggle('age-warn', mins >= WARN_MIN && mins < LATE_MIN);
+      card.classList.toggle('age-late', mins >= LATE_MIN);
+      const tv = card.querySelector('.time-val');
+      if (tv) tv.textContent = formatTime(order.timestamp);
+    }
+
+    // Tick global: actualiza cronómetros y alertas cada segundo
+    setInterval(() => {
+      Object.values(orders).forEach(o => {
+        const card = document.getElementById('order-' + o.id);
+        if (card) updateCardAge(card, o);
+      });
+    }, 1000);
+
+    // Ordena y filtra las tarjetas existentes sin destruirlas
+    function applyFilterSort() {
+      const grid = document.getElementById('ordersGrid');
+      const cards = [...grid.querySelectorAll('.comanda-card')];
+
+      cards.sort((a, b) => {
+        const ta = orders[a.dataset.id]?.timestamp || 0;
+        const tb = orders[b.dataset.id]?.timestamp || 0;
+        return sortOrder === 'recent' ? tb - ta : ta - tb;
+      });
+      cards.forEach(c => grid.appendChild(c));
+
+      const q = filterMesa.trim().toLowerCase();
+      let visible = 0;
+      cards.forEach(c => {
+        const mesa = String(orders[c.dataset.id]?.mesa || '').toLowerCase();
+        const show = !q || mesa.includes(q);
+        c.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      updateEmptyStates(cards.length, visible);
+    }
+
+    function updateEmptyStates(totalCards, visible) {
+      const grid = document.getElementById('ordersGrid');
+      // Sin pedidos en absoluto
+      if (totalCards === 0) {
+        removeNoMatch();
+        showEmpty();
+        return;
+      }
+      const empty = document.getElementById('emptyState');
+      if (empty) empty.remove();
+      // Hay pedidos pero el filtro los oculta todos
+      if (visible === 0) showNoMatch(); else removeNoMatch();
+    }
+
+    function showNoMatch() {
+      if (document.getElementById('noMatch')) return;
+      const grid = document.getElementById('ordersGrid');
+      const div = document.createElement('div');
+      div.id = 'noMatch';
+      div.className = 'empty-state';
+      div.innerHTML = `<span class="icon">🔍</span><p>Sin coincidencias</p><p style="font-size:0.82rem">Ninguna mesa coincide con “${filterMesa}”</p>`;
+      grid.appendChild(div);
+    }
+    function removeNoMatch() {
+      const n = document.getElementById('noMatch');
+      if (n) n.remove();
     }
 
     function removeOrder(id) {
@@ -371,7 +559,9 @@
         setTimeout(() => {
           card.remove();
           delete orders[id];
-          if (Object.keys(orders).length === 0) showEmpty();
+          const remaining = Object.keys(orders).length;
+          if (remaining === 0) { removeNoMatch(); showEmpty(); }
+          else applyFilterSort();
         }, 400);
       }
     }
@@ -389,6 +579,28 @@
 
     function updateCount() {
       document.getElementById('pendingCount').textContent = Object.keys(orders).length;
+    }
+
+    // ── Filtros y orden ──
+    function onFilterInput(val) {
+      filterMesa = val;
+      document.getElementById('clearFilter').style.display = val ? '' : 'none';
+      applyFilterSort();
+    }
+    function clearFilter() {
+      filterMesa = '';
+      const input = document.getElementById('filterMesa');
+      input.value = '';
+      document.getElementById('clearFilter').style.display = 'none';
+      applyFilterSort();
+      input.focus();
+    }
+    function toggleSort() {
+      sortOrder = sortOrder === 'recent' ? 'old' : 'recent';
+      document.getElementById('sortLabel').textContent =
+        sortOrder === 'recent' ? 'Recientes primero' : 'Antiguos primero';
+      document.getElementById('sortIcon').textContent = sortOrder === 'recent' ? '🕒' : '⏳';
+      applyFilterSort();
     }
 
     async function completeOrder(id) {
