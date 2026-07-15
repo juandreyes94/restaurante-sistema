@@ -65,13 +65,25 @@ function broadcast(msg) {
 
 // Recibir nuevo pedido
 app.post('/pedido', (req, res) => {
-  const { mesa, items, nombre, notas, nit, email } = req.body;
-  if (!mesa || !items?.length) {
+  const { mesa, items, nombre, notas, nit, email, tipo, direccion, telefono } = req.body;
+
+  // Tipo de pedido: 'mesa' | 'domicilio' | 'llevar' (si no llega, se deduce)
+  const tipoOk = ['mesa', 'domicilio', 'llevar'];
+  const tipoVal = tipoOk.includes(tipo) ? tipo : (mesa ? 'mesa' : 'llevar');
+
+  if (!items?.length) {
     return res.status(400).json({ error: 'Datos incompletos' });
   }
+  if (tipoVal === 'mesa' && !mesa) {
+    return res.status(400).json({ error: 'Falta el número de mesa' });
+  }
+
   const order = {
     id: nextId++,
-    mesa: String(mesa),
+    tipo: tipoVal,
+    mesa: String(mesa || ''),
+    direccion: (direccion || '').trim(),
+    telefono:  (telefono  || '').trim(),
     items,
     nombre: (nombre || '').trim(),
     notas:  (notas  || '').trim(),

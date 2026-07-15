@@ -11,69 +11,88 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      /* Paleta menú: rojo + blanco + verde */
+      /* ── Marca ── */
       --red:      #FB3E2C;   /* rojo del menú */
       --red-dark: #d62b1a;
       --green:    #16a34a;
       --green-dark:#15803d;
-      --amber:    #d97706;
-      /* Superficies claras */
-      --bg:       #f5f2ee;   /* fondo blanco cálido */
-      --surface:  #ffffff;   /* tarjetas y barras */
-      --ink:      #241812;   /* texto principal */
-      --ink-soft: #6f6157;   /* texto secundario */
-      --border:   rgba(36,24,18,0.10);
-      --muted:    rgba(36,24,18,0.45);
+      --amber:    #f59e0b;
+      --amber-dark:#b45309;
+      --orange:   #f97316;   /* naranja fase 2 del semáforo */
+      --orange-dark:#c2410c;
+      /* ── Superficies (KDS claro tipo OlaClick) ── */
+      --bg:       #eceef2;   /* fondo gris muy suave */
+      --surface:  #ffffff;   /* tarjetas / barras */
+      --surface-2:#f7f8fa;   /* zonas internas */
+      --ink:      #1f2430;   /* texto principal */
+      --ink-soft: #6b7280;   /* texto secundario */
+      --line:     #eceef1;   /* separadores */
+      --border:   #e4e7ec;   /* bordes suaves */
+      --muted:    #9aa1ac;
+      --shadow:   0 6px 20px rgba(23,29,41,0.08);
+      --shadow-lg:0 14px 40px rgba(23,29,41,0.14);
+      --r:        18px;      /* radio base */
     }
+    /* Escalado global: todo usa rem, así crece solo en tablet y TV */
+    html { font-size: 16px; }
+    @media (min-width: 1500px) { html { font-size: 18px; } }   /* TV pequeña / monitor grande */
+    @media (min-width: 1920px) { html { font-size: 21px; } }   /* TV Full HD */
+    @media (min-width: 2560px) { html { font-size: 27px; } }   /* TV 4K */
     body {
       font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(1200px 500px at 100% -10%, rgba(251,62,44,0.06), transparent 60%),
+        var(--bg);
       color: var(--ink);
       min-height: 100vh;
     }
     .bebas { font-family: 'Bebas Neue', sans-serif; }
 
-    /* Header */
+    /* ── HEADER ── */
     header {
-      background: var(--red);
+      background: linear-gradient(120deg, var(--red), var(--red-dark));
       color: #fff;
-      border-bottom: 3px solid var(--red-dark);
-      padding: 0.85rem 1.5rem;
+      padding: 0.9rem 1.5rem;
       display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 30;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      box-shadow: 0 6px 22px rgba(214,43,26,0.28);
     }
     .header-left { display: flex; align-items: center; gap: 0.75rem; }
-    .logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.08em; }
+    .logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.09em; line-height: 1; }
+    .status-row { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem; }
     .status-dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: rgba(255,255,255,0.6);
-      transition: background 0.3s;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.6); transition: background 0.3s;
     }
-    .status-dot.connected { background: #b6f5c8; box-shadow: 0 0 8px #6ee7a0; }
-    .status-dot.error { background: #2a1c12; }
-    .status-label { font-size: 0.75rem; color: rgba(255,255,255,0.85); }
+    .status-dot.connected { background: #7ef0a5; box-shadow: 0 0 10px #7ef0a5; }
+    .status-dot.error { background: #1f2430; }
+    .status-label { font-size: 0.72rem; color: rgba(255,255,255,0.85); letter-spacing: 0.02em; }
 
-    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .header-right { display: flex; align-items: center; gap: 0.85rem; }
     .pending-count {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.4rem; letter-spacing: 0.05em;
-      text-align: right; line-height: 1;
+      display: flex; align-items: center; gap: 0.5rem;
+      background: rgba(0,0,0,0.16); border-radius: 12px;
+      padding: 0.35rem 0.8rem;
     }
-    .pending-count span { color: #fff; background: rgba(0,0,0,0.18); padding: 0 0.4rem; border-radius: 6px; }
-    .pending-count small { display:block; font-family:'DM Sans',sans-serif; font-size:0.6rem; letter-spacing:0.12em; opacity:0.8; text-transform:uppercase; margin-top:0.15rem; }
+    .pending-count .num { font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; line-height: 1; display: inline-block; }
+    .pending-count .num.bump { animation: countBump 0.4s ease; }
+    @keyframes countBump {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.45); color: #ffe08a; }
+      100% { transform: scale(1); }
+    }
+    .pending-count .lbl { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; }
 
-    /* Botón historial (control) */
     .history-toggle {
-      display: flex; align-items: center; gap: 0.45rem;
+      display: flex; align-items: center; gap: 0.5rem;
       background: #fff; color: var(--red);
-      border: none; border-radius: 10px;
-      padding: 0.5rem 0.85rem;
-      font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.06em;
+      border: none; border-radius: 12px;
+      padding: 0.55rem 0.95rem;
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; letter-spacing: 0.06em;
       cursor: pointer; transition: transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 3px 12px rgba(0,0,0,0.18);
     }
-    .history-toggle:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .history-toggle:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
     .history-toggle .badge {
       background: var(--green); color: #fff;
       font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.72rem;
@@ -81,52 +100,51 @@
       border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
     }
 
-    /* Toolbar (filtros y orden) */
+    /* ── TOOLBAR ── */
     .toolbar {
-      position: sticky; top: 64px; z-index: 20;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(6px);
+      position: sticky; top: 4.4rem; z-index: 20;
+      background: rgba(236,238,242,0.85);
+      backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
-      padding: 0.65rem 1.25rem;
+      padding: 0.7rem 1.5rem;
     }
     .search-box {
       display: flex; align-items: center; gap: 0.45rem;
-      background: var(--bg);
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.45rem 0.7rem;
-      flex: 1; min-width: 160px; max-width: 260px;
+      border-radius: 12px;
+      padding: 0.5rem 0.8rem;
+      flex: 1; min-width: 160px; max-width: 280px;
+      box-shadow: var(--shadow);
     }
     .search-box input {
       background: none; border: none; outline: none;
-      color: var(--ink); font-size: 0.85rem; width: 100%;
+      color: var(--ink); font-size: 0.88rem; width: 100%; font-family: inherit;
     }
     .search-box input::placeholder { color: var(--muted); }
-    .search-box .clear-x {
-      cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1;
-      background: none; border: none;
-    }
+    .search-box .clear-x { cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1; background: none; border: none; }
     .sort-btn {
       display: flex; align-items: center; gap: 0.4rem;
-      background: var(--bg);
+      background: var(--surface);
       border: 1px solid var(--border);
       color: var(--ink);
-      border-radius: 8px;
-      padding: 0.45rem 0.85rem;
-      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
-      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      border-radius: 12px;
+      padding: 0.5rem 0.95rem;
+      font-family: 'DM Sans', sans-serif; font-size: 0.83rem; font-weight: 600;
+      cursor: pointer; transition: border-color 0.2s, transform 0.15s;
+      box-shadow: var(--shadow);
     }
-    .sort-btn:hover { border-color: var(--red); }
+    .sort-btn:hover { border-color: var(--red); transform: translateY(-1px); }
     .toolbar-spacer { flex: 1; }
     .legend { display: flex; align-items: center; gap: 0.9rem; font-size: 0.72rem; color: var(--ink-soft); }
     .legend span { display: flex; align-items: center; gap: 0.35rem; }
-    .legend .dot { width: 9px; height: 9px; border-radius: 2px; }
+    .legend .dot { width: 10px; height: 10px; border-radius: 3px; }
     .legend .dot.ok   { background: var(--green); }
-    .legend .dot.warn { background: var(--amber); }
+    .legend .dot.warn { background: var(--orange); }
     .legend .dot.late { background: var(--red); }
 
-    /* Empty state */
+    /* ── EMPTY STATE ── */
     .empty-state {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       min-height: 55vh; color: var(--ink-soft); text-align: center; gap: 0.75rem;
@@ -135,260 +153,285 @@
     .empty-state .icon { font-size: 3.5rem; }
     .empty-state p { font-size: 1.1rem; }
 
-    /* Orders grid */
+    /* ── GRID ── */
     .orders-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.15rem;
-      padding: 1.35rem;
+      grid-template-columns: repeat(auto-fill, minmax(19.5rem, 1fr));
+      gap: 1.25rem;
+      padding: 1.5rem;
     }
 
-    /* Comanda card */
+    /* ── COMANDA CARD (estilo KDS) ── */
     .comanda-card {
+      position: relative;
       background: var(--surface);
       color: var(--ink);
       border: 1px solid var(--border);
-      border-left: 6px solid var(--green);
-      border-radius: 16px;
+      border-radius: var(--r);
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      box-shadow: var(--shadow);
       animation: slideIn 0.4s ease both;
-      transition: border-color 0.3s, box-shadow 0.3s, transform 0.15s;
+      transition: box-shadow 0.3s, transform 0.15s;
       display: flex; flex-direction: column;
     }
-    .comanda-card:hover { transform: translateY(-2px); }
-    /* Alertas de tiempo */
-    .comanda-card.age-warn { border-left-color: var(--amber); }
+    .comanda-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    /* Franja de urgencia superior */
+    .comanda-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px;
+      background: var(--green); transition: background 0.4s; z-index: 2;
+    }
+    /* Semáforo: la comanda se llena de color desde abajo con el tiempo */
+    .time-fill {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 0; z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(to top, rgba(22,163,74,0.16), transparent);
+      transition: height 0.9s linear, background 0.6s ease;
+    }
+    .comanda-card > .type-chip,
+    .comanda-card > .card-header,
+    .comanda-card > .card-body { position: relative; z-index: 1; }
+
+    /* Chip de tipo de pedido (mesa / domicilio / llevar) */
+    .type-chip {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      width: fit-content; margin: 0.95rem 1.15rem 0;
+      font-family: 'DM Sans', sans-serif; font-weight: 800;
+      font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 0.32rem 0.75rem; border-radius: 999px;
+    }
+    .type-chip .ic { font-size: 1.15rem; }
+    /* Bloque de entrega (solo domicilio) */
+    .card-loc {
+      margin: 0 0 0.7rem; padding: 0.6rem 0.75rem;
+      background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.18);
+      border-radius: 12px;
+      display: flex; flex-direction: column; gap: 0.3rem;
+      font-size: 0.9rem; color: var(--ink);
+    }
+    .card-loc strong { color: var(--ink); }
+    .card-loc .lbl { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: #7c3aed; font-weight: 700; }
+    .comanda-card.age-warn::before { background: var(--orange); }
+    .comanda-card.age-late::before { background: var(--red); }
     .comanda-card.age-late {
-      border-left-color: var(--red);
-      box-shadow: 0 0 0 2px rgba(251,62,44,0.45), 0 8px 24px rgba(251,62,44,0.3);
-      animation: slideIn 0.4s ease both, late-pulse 1.4s ease-in-out infinite;
+      box-shadow: 0 0 0 2px rgba(251,62,44,0.35), var(--shadow-lg);
+      animation: slideIn 0.4s ease both, late-pulse 1.5s ease-in-out infinite;
     }
     @keyframes late-pulse {
-      0%, 100% { box-shadow: 0 0 0 1px rgba(251,62,44,0.4),  0 8px 24px rgba(251,62,44,0.22); }
-      50%      { box-shadow: 0 0 0 3px rgba(251,62,44,0.75), 0 10px 30px rgba(251,62,44,0.45); }
+      0%,100% { box-shadow: 0 0 0 1px rgba(251,62,44,0.3), var(--shadow); }
+      50%     { box-shadow: 0 0 0 3px rgba(251,62,44,0.55), var(--shadow-lg); }
     }
-    .comanda-card.new-order { animation: slideIn 0.4s ease both, pulse-border 1s ease 3; }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    @keyframes pulse-border {
-      0%, 100% { border-left-color: var(--red); }
-      50%       { border-left-color: rgba(251,62,44,0.3); }
-    }
+    .comanda-card.new-order { animation: slideIn 0.4s ease both, flash 0.9s ease 2; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes flash { 0%,100% { box-shadow: var(--shadow); } 50% { box-shadow: 0 0 0 3px rgba(251,62,44,0.5), var(--shadow-lg); } }
+    /* Todos los ítems marcados → invita a cerrar */
+    .comanda-card.all-done { box-shadow: 0 0 0 2px rgba(22,163,74,0.5), var(--shadow-lg); }
+    .comanda-card.all-done::before { background: var(--green); }
 
+    /* Cabecera de tarjeta */
     .card-header {
-      background: var(--red);
-      color: #fff;
-      padding: 0.7rem 1.05rem;
-      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.95rem 1.15rem 0.7rem;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;
     }
-    .mesa-label { font-family: 'Bebas Neue', sans-serif; font-size: 1.55rem; letter-spacing: 0.06em; }
-    .order-meta { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
-    .order-id { font-size: 0.72rem; opacity: 0.8; }
+    .mesa-block { display: flex; flex-direction: column; gap: 0.15rem; }
+    .mesa-label {
+      font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.04em;
+      line-height: 0.95; color: var(--ink);
+    }
+    .mesa-label b { color: var(--red); }
+    .order-sub { font-size: 0.76rem; color: var(--ink-soft); display: flex; align-items: center; gap: 0.35rem; }
+    /* Cronómetro (pill que escala de color) */
     .order-time {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.05rem; letter-spacing: 0.04em;
+      font-size: 1.25rem; letter-spacing: 0.03em;
       display: inline-flex; align-items: center; gap: 0.3rem;
-      background: rgba(0,0,0,0.22); padding: 0.1rem 0.5rem; border-radius: 6px;
+      background: rgba(22,163,74,0.12); color: var(--green-dark);
+      padding: 0.25rem 0.6rem; border-radius: 10px; white-space: nowrap;
+      transition: background 0.4s, color 0.4s;
     }
+    .comanda-card.age-warn .order-time { background: rgba(249,115,22,0.18); color: var(--orange-dark); }
+    .comanda-card.age-late .order-time { background: rgba(251,62,44,0.16); color: var(--red-dark); }
 
-    .card-body { padding: 1.05rem 1.15rem 1.15rem; flex: 1; display: flex; flex-direction: column; }
+    .card-body { padding: 0 1.15rem 1.15rem; flex: 1; display: flex; flex-direction: column; }
 
-    /* Items list */
+    /* Lista de ítems con check */
+    .items-list { border-top: 1px solid var(--line); }
     .item-row {
-      display: flex; align-items: baseline; gap: 0.55rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.95rem;
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.6rem 0.15rem;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.96rem; cursor: pointer;
+      transition: opacity 0.2s;
+      user-select: none;
     }
-    .item-row:last-child { border-bottom: none; }
-    .item-qty {
-      font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem;
-      color: var(--red); min-width: 28px;
+    .item-check {
+      flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px;
+      border: 2px solid var(--border); background: var(--surface);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 0.85rem; transition: background 0.2s, border-color 0.2s;
     }
+    .item-qty { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: var(--red); min-width: 30px; }
     .item-name { flex: 1; font-weight: 600; color: var(--ink); }
     .item-price { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+    .item-row.done .item-check { background: var(--green); border-color: var(--green); }
+    .item-row.done .item-name { text-decoration: line-through; color: var(--muted); }
+    .item-row.done .item-qty { color: var(--muted); }
+    .item-row.done { opacity: 0.7; }
 
     /* Total */
     .card-total {
       display: flex; align-items: center; justify-content: space-between;
-      margin-top: 0.7rem; padding-top: 0.7rem;
-      border-top: 1.5px dashed var(--border);
+      margin-top: 0.7rem; padding: 0.6rem 0.75rem;
+      background: var(--surface-2); border-radius: 12px;
     }
     .card-total .lbl { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.06em; font-size: 1.05rem; color: var(--ink-soft); }
-    .card-total .val { font-family: 'Bebas Neue', sans-serif; font-size: 1.45rem; color: var(--red); font-variant-numeric: tabular-nums; }
+    .card-total .val { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--red); font-variant-numeric: tabular-nums; }
 
     /* Cliente y notas */
     .card-meta {
-      margin-top: 0.8rem;
-      padding-top: 0.8rem;
-      border-top: 1px solid var(--border);
+      margin-top: 0.7rem; padding: 0.55rem 0.7rem;
+      background: rgba(251,62,44,0.05); border-radius: 10px;
       font-size: 0.83rem; color: var(--ink-soft);
       display: flex; flex-direction: column; gap: 0.3rem;
     }
     .card-meta strong { color: var(--ink); }
 
-    /* Completar btn */
-    .btn-row { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 1rem; }
+    /* Fila de acciones */
+    .btn-row { display: flex; align-items: center; gap: 0.55rem; margin-top: auto; padding-top: 1rem; }
+    .progress-pill {
+      font-size: 0.74rem; font-weight: 700; color: var(--ink-soft);
+      background: var(--surface-2); border: 1px solid var(--border);
+      padding: 0.3rem 0.55rem; border-radius: 999px; white-space: nowrap;
+    }
+    .comanda-card.all-done .progress-pill { background: rgba(22,163,74,0.12); color: var(--green-dark); border-color: transparent; }
     .complete-btn {
       flex: 1;
-      padding: 0.75rem;
+      padding: 0.8rem;
       background: var(--green);
-      border: 1.5px solid var(--green);
+      border: none;
       color: #fff;
-      border-radius: 8px;
+      border-radius: 12px;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 1rem; letter-spacing: 0.1em;
+      font-size: 1.1rem; letter-spacing: 0.1em;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
       display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(22,163,74,0.28);
     }
-    .complete-btn:hover { background: var(--green-dark); border-color: var(--green-dark); }
+    .complete-btn:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .complete-btn:active { transform: translateY(0); }
+    .comanda-card.all-done .complete-btn { animation: ready-pulse 1.2s ease-in-out infinite; }
+    @keyframes ready-pulse { 0%,100% { box-shadow: 0 4px 12px rgba(22,163,74,0.28); } 50% { box-shadow: 0 4px 22px rgba(22,163,74,0.6); } }
 
-    /* Facturar btn */
     .invoice-btn {
       flex: 0 0 auto;
-      padding: 0.75rem 0.9rem;
-      background: transparent;
-      border: 1.5px solid var(--amber);
-      color: var(--amber);
-      border-radius: 8px;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1rem; letter-spacing: 0.1em;
+      padding: 0.8rem 0.95rem;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      color: var(--amber-dark);
+      border-radius: 12px;
+      font-size: 1.05rem;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: background 0.2s, border-color 0.2s;
     }
-    .invoice-btn:hover { background: var(--amber); color: #fff; }
-    .invoice-btn.done { border-color: var(--green); color: var(--green); cursor: default; }
-    .invoice-form {
-      display: none; gap: 0.4rem; margin-top: 0.5rem;
-    }
+    .invoice-btn:hover { background: rgba(245,158,11,0.14); border-color: var(--amber); }
+    .invoice-btn.done { border-color: var(--green); color: var(--green); background: rgba(22,163,74,0.1); cursor: default; }
+    .invoice-form { display: none; gap: 0.4rem; margin-top: 0.55rem; }
     .invoice-form input {
       flex: 1; min-width: 0;
-      background: var(--bg);
+      background: var(--surface-2);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--ink); font-size: 0.8rem;
-      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      color: var(--ink); font-size: 0.82rem;
+      padding: 0.55rem 0.7rem;
     }
     .invoice-submit {
-      padding: 0.5rem 0.85rem;
+      padding: 0.55rem 0.9rem;
       background: var(--red); color: #fff;
-      border: none; border-radius: 6px;
+      border: none; border-radius: 8px;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 0.9rem; letter-spacing: 0.08em;
+      font-size: 0.92rem; letter-spacing: 0.08em;
       cursor: pointer; white-space: nowrap;
     }
-    .comanda-card.invoiced .card-header { background: var(--green-dark); }
+    .comanda-card.invoiced::before { background: var(--green-dark); }
 
-    /* ── Barra lateral: Historial / Control ── */
+    /* ── BARRA HISTORIAL (control) ── */
     .drawer-backdrop {
       position: fixed; inset: 0; z-index: 45;
-      background: rgba(0,0,0,0.35);
+      background: rgba(23,29,41,0.4); backdrop-filter: blur(2px);
       opacity: 0; pointer-events: none; transition: opacity 0.25s;
     }
     .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
     .history-drawer {
       position: fixed; top: 0; right: 0; z-index: 50;
-      width: min(420px, 92vw); height: 100%;
-      background: var(--surface);
-      box-shadow: -8px 0 30px rgba(0,0,0,0.25);
+      width: min(430px, 92vw); height: 100%;
+      background: var(--bg);
+      box-shadow: -12px 0 40px rgba(23,29,41,0.28);
       transform: translateX(100%);
-      transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
       display: flex; flex-direction: column;
     }
     .history-drawer.open { transform: translateX(0); }
     .drawer-head {
-      background: var(--green); color: #fff;
-      padding: 1rem 1.15rem;
+      background: linear-gradient(120deg, var(--green), var(--green-dark)); color: #fff;
+      padding: 1.1rem 1.2rem;
       display: flex; align-items: center; justify-content: space-between;
     }
-    .drawer-head h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; display:flex; align-items:center; gap:0.5rem; }
-    .drawer-head .sub { font-size: 0.7rem; opacity: 0.9; letter-spacing: 0.03em; margin-top: 0.1rem; }
+    .drawer-head h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.05em; display:flex; align-items:center; gap:0.5rem; }
+    .drawer-head .sub { font-size: 0.72rem; opacity: 0.92; margin-top: 0.1rem; }
     .drawer-close {
-      background: rgba(0,0,0,0.15); color: #fff; border: none;
-      width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
-      font-size: 1.2rem; line-height: 1;
+      background: rgba(0,0,0,0.16); color: #fff; border: none;
+      width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 1.3rem; line-height: 1;
     }
-    .drawer-body { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
     .drawer-empty { color: var(--muted); text-align: center; margin-top: 3rem; font-size: 0.9rem; }
-    .drawer-foot { padding: 0.85rem 1rem; border-top: 1px solid var(--border); }
+    .drawer-foot { padding: 0.9rem 1rem; border-top: 1px solid var(--border); background: var(--surface); }
     .clear-history-btn {
-      width: 100%; padding: 0.7rem;
+      width: 100%; padding: 0.75rem;
       background: transparent; border: 1.5px solid var(--red); color: var(--red);
-      border-radius: 8px; cursor: pointer;
-      font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.08em;
+      border-radius: 12px; cursor: pointer;
+      font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.08em;
       transition: background 0.2s, color 0.2s;
     }
     .clear-history-btn:hover { background: var(--red); color: #fff; }
 
-    .hist-card {
-      border: 1px solid var(--border);
-      border-left: 5px solid var(--green);
-      border-radius: 12px; overflow: hidden;
-      background: var(--surface);
-      animation: slideIn 0.3s ease both;
-    }
-    .hist-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0.5rem 0.8rem; background: var(--bg);
-    }
-    .hist-mesa { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; letter-spacing: 0.05em; color: var(--ink); }
+    .hist-card { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); animation: slideIn 0.3s ease both; }
+    .hist-head { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--line); }
+    .hist-mesa { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.04em; color: var(--ink); }
     .hist-when { font-size: 0.72rem; color: var(--ink-soft); text-align: right; }
     .hist-when .check { color: var(--green); font-weight: 700; }
-    .hist-body { padding: 0.55rem 0.8rem 0.7rem; }
-    .hist-line { display: flex; gap: 0.4rem; font-size: 0.82rem; padding: 0.12rem 0; color: var(--ink); }
+    .hist-body { padding: 0.6rem 0.85rem 0.75rem; }
+    .hist-line { display: flex; gap: 0.45rem; font-size: 0.84rem; padding: 0.13rem 0; color: var(--ink); }
     .hist-line .q { color: var(--red); font-weight: 700; min-width: 26px; }
-    .hist-total {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-top: 0.45rem; padding-top: 0.45rem; border-top: 1px dashed var(--border);
-      font-size: 0.82rem; color: var(--ink-soft);
-    }
-    .hist-total b { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--ink); }
-    .hist-badges { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
-    .hist-badge {
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
-      padding: 0.15rem 0.5rem; border-radius: 999px;
-    }
+    .hist-total { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); font-size: 0.84rem; color: var(--ink-soft); }
+    .hist-total b { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; color: var(--ink); }
+    .hist-badges { display: flex; gap: 0.35rem; margin-top: 0.55rem; flex-wrap: wrap; }
+    .hist-badge { font-size: 0.68rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 999px; }
     .hist-badge.done { background: rgba(22,163,74,0.14); color: var(--green-dark); }
-    .hist-badge.inv  { background: rgba(217,119,6,0.16); color: var(--amber); }
+    .hist-badge.inv  { background: rgba(245,158,11,0.16); color: var(--amber-dark); }
 
-    /* Toast notification */
+    /* ── Toast ── */
     .toast {
-      position: fixed; top: 5rem; right: 1rem; z-index: 99;
-      background: var(--red); color: #fff;
-      padding: 0.75rem 1.25rem;
-      border-radius: 10px;
+      position: fixed; top: 5.5rem; right: 1rem; z-index: 99;
+      background: var(--ink); color: #fff;
+      padding: 0.8rem 1.3rem; border-radius: 12px;
       font-weight: 600; font-size: 0.9rem;
-      box-shadow: 0 8px 24px rgba(251,62,44,0.5);
+      box-shadow: var(--shadow-lg);
       animation: toastIn 0.3s ease both;
     }
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* Reconnect overlay */
+    /* ── Reconnect overlay ── */
     .reconnect-overlay {
       position: fixed; inset: 0; z-index: 80;
-      background: rgba(255,255,255,0.94);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 1rem;
-      text-align: center;
+      background: rgba(236,238,242,0.95);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; text-align: center;
     }
     .reconnect-overlay p { color: var(--ink-soft); font-size: 0.9rem; }
-    .spinner {
-      width: 40px; height: 40px; border-radius: 50%;
-      border: 3px solid var(--border);
-      border-top-color: var(--red);
-      animation: spin 0.8s linear infinite;
-    }
+    .spinner { width: 42px; height: 42px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--red); animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 520px) {
-      .toolbar { top: 60px; }
+      .toolbar { top: 62px; }
       .legend { display: none; }
     }
   </style>
@@ -399,9 +442,9 @@
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <div style="display:flex;flex-direction:column;gap:0.2rem">
+      <div style="display:flex;flex-direction:column">
         <span class="logo-text">🍽️ Comandas</span>
-        <div style="display:flex;align-items:center;gap:0.4rem">
+        <div class="status-row">
           <div class="status-dot" id="statusDot"></div>
           <span class="status-label" id="statusLabel">Conectando...</span>
         </div>
@@ -409,8 +452,8 @@
     </div>
     <div class="header-right">
       <div class="pending-count">
-        <span id="pendingCount">0</span>
-        <small>Pendientes</small>
+        <span class="num" id="pendingCount">0</span>
+        <span class="lbl">En<br>cocina</span>
       </div>
       <button class="history-toggle" onclick="toggleHistory()" title="Pedidos anteriores (control)">
         📋 Anteriores <span class="badge" id="historyBadge">0</span>
@@ -418,7 +461,7 @@
     </div>
   </header>
 
-  <!-- TOOLBAR: filtros y orden -->
+  <!-- TOOLBAR -->
   <div class="toolbar">
     <div class="search-box">
       <span style="color:var(--muted)">🔎</span>
@@ -430,9 +473,9 @@
     </button>
     <div class="toolbar-spacer"></div>
     <div class="legend">
-      <span><span class="dot ok"></span>&lt; 5 min</span>
-      <span><span class="dot warn"></span>5–10 min</span>
-      <span><span class="dot late"></span>&gt; 10 min</span>
+      <span><span class="dot ok"></span>A tiempo · 0–5 min</span>
+      <span><span class="dot warn"></span>Apúrate · 5–10 min</span>
+      <span><span class="dot late"></span>¡Límite! · 10 min</span>
     </div>
   </div>
 
@@ -484,13 +527,26 @@
     let ws;
     let reconnectTimer;
 
-    // Estado de filtros / orden
+    // Tipos de pedido — el color aquí es solo del chip (el tiempo usa el semáforo)
+    const TIPOS = {
+      mesa:      { icon: '🍽️', label: 'En mesa',     color: '#2563eb' },
+      domicilio: { icon: '🛵', label: 'Domicilio',   color: '#7c3aed' },
+      llevar:    { icon: '🥡', label: 'Para llevar',  color: '#ea580c' },
+    };
+    function tipoDe(o) { return TIPOS[o.tipo] ? o.tipo : (o.mesa ? 'mesa' : 'llevar'); }
+    function hexA(hex, a) {
+      const n = parseInt(hex.slice(1), 16);
+      return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+    }
+
     let filterMesa = '';
     let sortOrder = 'recent'; // 'recent' | 'old'
 
-    // Umbrales de alerta (minutos)
-    const WARN_MIN = 5;
-    const LATE_MIN = 10;
+    // Umbrales del semáforo en minutos. Ajustables por URL para pruebas:
+    //   comanda.html?warn=0.3&late=0.6  → se llena en ~40 s
+    const _p = new URLSearchParams(location.search);
+    const WARN_MIN = parseFloat(_p.get('warn')) || 5;
+    const LATE_MIN = parseFloat(_p.get('late')) || 10;
 
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -541,11 +597,8 @@
       document.getElementById('statusLabel').textContent = label;
     }
 
-    function fmtCOP(n) {
-      return '$' + Number(n || 0).toLocaleString('es-CO');
-    }
+    function fmtCOP(n) { return '$' + Number(n || 0).toLocaleString('es-CO'); }
 
-    // Cronómetro: tiempo transcurrido en MM:SS (o Xs)
     function formatTime(ts) {
       const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
       const m = Math.floor(diff / 60);
@@ -553,7 +606,6 @@
       return m > 0 ? `${m}:${String(s).padStart(2, '0')} min` : `${s}s`;
     }
 
-    // Hora de reloj (HH:MM) para el historial
     function clockTime(ts) {
       return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     }
@@ -575,7 +627,8 @@
 
       const itemsHTML = order.items.map(i => {
         const line = (Number(i.price) || 0) * (Number(i.qty) || 0);
-        return `<div class="item-row">
+        return `<div class="item-row" onclick="toggleItem(this)">
+          <span class="item-check">✓</span>
           <span class="item-qty">${i.qty}×</span>
           <span class="item-name">${i.name}</span>
           ${line > 0 ? `<span class="item-price">${fmtCOP(line)}</span>` : ''}
@@ -595,20 +648,40 @@
           ${order.notas  ? `<span>📝 ${order.notas}</span>` : ''}
         </div>` : '';
 
+      const nItems = order.items.length;
+
+      const tp = tipoDe(order);
+      const T = TIPOS[tp];
+      const chipHTML = `<div class="type-chip" style="background:${hexA(T.color,0.12)};color:${T.color}">
+        <span class="ic">${T.icon}</span>${T.label}</div>`;
+      const titleMain = tp === 'mesa'
+        ? `Mesa <b>${order.mesa}</b>`
+        : (order.nombre ? order.nombre : T.label);
+      const locHTML = tp === 'domicilio' ? `
+        <div class="card-loc">
+          <span class="lbl">Entrega</span>
+          ${order.direccion ? `<span>📍 <strong>${order.direccion}</strong></span>` : ''}
+          ${order.telefono  ? `<span>📞 ${order.telefono}</span>` : ''}
+        </div>` : '';
+
       card.innerHTML = `
+        <div class="time-fill"></div>
+        ${chipHTML}
         <div class="card-header">
-          <span class="mesa-label">Mesa ${order.mesa}</span>
-          <div class="order-meta">
-            <div class="order-id">#${order.id}</div>
-            <div class="order-time">⏱ <span class="time-val">${formatTime(order.timestamp)}</span></div>
+          <div class="mesa-block">
+            <span class="mesa-label">${titleMain}</span>
+            <span class="order-sub">Pedido #${order.id}</span>
           </div>
+          <div class="order-time">⏱ <span class="time-val">${formatTime(order.timestamp)}</span></div>
         </div>
         <div class="card-body">
+          ${locHTML}
           <div class="items-list">${itemsHTML}</div>
           ${totalHTML}
           ${metaHTML}
           <div class="btn-row">
-            <button class="complete-btn" onclick="completeOrder(${order.id})">✓ Completado</button>
+            <span class="progress-pill">0/${nItems} listos</span>
+            <button class="complete-btn" onclick="completeOrder(${order.id})">✓ Listo</button>
             <button class="invoice-btn" id="inv-btn-${order.id}" onclick="toggleInvoice(${order.id})">🧾</button>
           </div>
           <div class="invoice-form" id="inv-form-${order.id}">
@@ -621,16 +694,41 @@
       updateCardAge(card, order);
     }
 
-    // Aplica clase de urgencia y actualiza el cronómetro de una tarjeta
-    function updateCardAge(card, order) {
-      const mins = (Date.now() - order.timestamp) / 60000;
-      card.classList.toggle('age-warn', mins >= WARN_MIN && mins < LATE_MIN);
-      card.classList.toggle('age-late', mins >= LATE_MIN);
-      const tv = card.querySelector('.time-val');
-      if (tv) tv.textContent = formatTime(order.timestamp);
+    // Marca / desmarca un ítem individual (ayuda visual para cocina)
+    function toggleItem(row) {
+      row.classList.toggle('done');
+      const card = row.closest('.comanda-card');
+      if (card) updateProgress(card);
+    }
+    function updateProgress(card) {
+      const rows = card.querySelectorAll('.item-row');
+      const done = card.querySelectorAll('.item-row.done').length;
+      const pill = card.querySelector('.progress-pill');
+      if (pill) pill.textContent = `${done}/${rows.length} listos`;
+      card.classList.toggle('all-done', rows.length > 0 && done === rows.length);
     }
 
-    // Tick global: actualiza cronómetros y alertas cada segundo
+    function updateCardAge(card, order) {
+      const mins = (Date.now() - order.timestamp) / 60000;
+      const warn = mins >= WARN_MIN && mins < LATE_MIN;
+      const late = mins >= LATE_MIN;
+      card.classList.toggle('age-warn', warn);
+      card.classList.toggle('age-late', late);
+      const tv = card.querySelector('.time-val');
+      if (tv) tv.textContent = formatTime(order.timestamp);
+
+      // Semáforo: la comanda se llena de color desde abajo con el tiempo
+      const fill = card.querySelector('.time-fill');
+      if (fill) {
+        const progress = Math.min(mins / LATE_MIN, 1);   // 0 → 100% en 10 min
+        fill.style.height = (progress * 100).toFixed(1) + '%';
+        const color = late ? 'rgba(251,62,44,0.24)'       // 🔴 rojo — llegó al límite (10 min)
+                    : warn ? 'rgba(249,115,22,0.22)'       // 🟠 naranja — apúrate (5–10 min)
+                           : 'rgba(22,163,74,0.16)';       // 🟢 verde — a tiempo (0–5 min)
+        fill.style.background = `linear-gradient(to top, ${color}, transparent)`;
+      }
+    }
+
     setInterval(() => {
       Object.values(orders).forEach(o => {
         const card = document.getElementById('order-' + o.id);
@@ -638,7 +736,6 @@
       });
     }, 1000);
 
-    // Ordena y filtra las tarjetas existentes sin destruirlas
     function applyFilterSort() {
       const grid = document.getElementById('ordersGrid');
       const cards = [...grid.querySelectorAll('.comanda-card')];
@@ -653,8 +750,9 @@
       const q = filterMesa.trim().toLowerCase();
       let visible = 0;
       cards.forEach(c => {
-        const mesa = String(orders[c.dataset.id]?.mesa || '').toLowerCase();
-        const show = !q || mesa.includes(q);
+        const o = orders[c.dataset.id] || {};
+        const hay = (String(o.mesa || '') + ' ' + String(o.nombre || '')).toLowerCase();
+        const show = !q || hay.includes(q);
         c.style.display = show ? '' : 'none';
         if (show) visible++;
       });
@@ -664,15 +762,9 @@
 
     function updateEmptyStates(totalCards, visible) {
       const grid = document.getElementById('ordersGrid');
-      // Sin pedidos en absoluto
-      if (totalCards === 0) {
-        removeNoMatch();
-        showEmpty();
-        return;
-      }
+      if (totalCards === 0) { removeNoMatch(); showEmpty(); return; }
       const empty = document.getElementById('emptyState');
       if (empty) empty.remove();
-      // Hay pedidos pero el filtro los oculta todos
       if (visible === 0) showNoMatch(); else removeNoMatch();
     }
 
@@ -685,26 +777,25 @@
       div.innerHTML = `<span class="icon">🔍</span><p>Sin coincidencias</p><p style="font-size:0.82rem">Ninguna mesa coincide con “${filterMesa}”</p>`;
       grid.appendChild(div);
     }
-    function removeNoMatch() {
-      const n = document.getElementById('noMatch');
-      if (n) n.remove();
-    }
+    function removeNoMatch() { const n = document.getElementById('noMatch'); if (n) n.remove(); }
 
     function removeOrder(id) {
+      if (!orders[id]) return;      // ya se quitó (evita descontar dos veces)
+      delete orders[id];            // ← descuenta del conteo AL INSTANTE
+      updateCount();
+
       const card = document.getElementById('order-' + id);
+      const finish = () => {
+        if (Object.keys(orders).length === 0) { removeNoMatch(); showEmpty(); }
+        else applyFilterSort();
+      };
       if (card) {
         card.style.transition = 'opacity 0.4s, transform 0.4s';
         card.style.opacity = '0';
         card.style.transform = 'scale(0.9)';
-        setTimeout(() => {
-          card.remove();
-          delete orders[id];
-          const remaining = Object.keys(orders).length;
-          if (remaining === 0) { removeNoMatch(); showEmpty(); }
-          else applyFilterSort();
-        }, 400);
+        setTimeout(() => { card.remove(); finish(); }, 400);
       } else {
-        delete orders[id];
+        finish();
       }
     }
 
@@ -720,7 +811,14 @@
     }
 
     function updateCount() {
-      document.getElementById('pendingCount').textContent = Object.keys(orders).length;
+      const el = document.getElementById('pendingCount');
+      const n = Object.keys(orders).length;
+      if (el.textContent !== String(n)) {
+        el.textContent = n;
+        el.classList.remove('bump');
+        void el.offsetWidth;        // reinicia la animación
+        el.classList.add('bump');
+      }
     }
 
     // ── Historial (control) ──
@@ -750,23 +848,29 @@
           `<div class="hist-line"><span class="q">${i.qty}×</span><span>${i.name}</span></div>`
         ).join('');
         const total = orderTotal(o);
-        const totalHTML = total > 0
-          ? `<div class="hist-total"><span>Total</span><b>${fmtCOP(total)}</b></div>` : '';
-        const cliente = o.nombre ? `<div class="hist-line" style="color:var(--ink-soft)">👤 ${o.nombre}</div>` : '';
-        const invBadge = o.facturado
-          ? `<span class="hist-badge inv">🧾 Facturado${o.facturaNum ? ' ' + o.facturaNum : ''}</span>` : '';
+        const totalHTML = total > 0 ? `<div class="hist-total"><span>Total</span><b>${fmtCOP(total)}</b></div>` : '';
+        const tp = tipoDe(o);
+        const T = TIPOS[tp];
+        const histTitle = tp === 'mesa' ? `Mesa ${o.mesa}` : (o.nombre || T.label);
+        const cliente = (tp !== 'mesa' && o.nombre) ? '' :
+          (o.nombre ? `<div class="hist-line" style="color:var(--ink-soft)">👤 ${o.nombre}</div>` : '');
+        const dirLine = (tp === 'domicilio' && o.direccion)
+          ? `<div class="hist-line" style="color:var(--ink-soft)">📍 ${o.direccion}${o.telefono ? ' · 📞 ' + o.telefono : ''}</div>` : '';
+        const invBadge = o.facturado ? `<span class="hist-badge inv">🧾 Facturado${o.facturaNum ? ' ' + o.facturaNum : ''}</span>` : '';
         return `
           <div class="hist-card">
             <div class="hist-head">
-              <span class="hist-mesa">Mesa ${o.mesa}</span>
+              <span class="hist-mesa">${T.icon} ${histTitle}</span>
               <span class="hist-when"><span class="check">✓ Entregado</span><br>${clockTime(o.completedAt || o.timestamp)} · #${o.id}</span>
             </div>
             <div class="hist-body">
               ${lines}
+              ${dirLine}
               ${cliente}
               ${totalHTML}
               <div class="hist-badges">
                 <span class="hist-badge done">Completado</span>
+                <span class="hist-badge" style="background:${hexA(T.color,0.12)};color:${T.color}">${T.icon} ${T.label}</span>
                 ${invBadge}
               </div>
             </div>
