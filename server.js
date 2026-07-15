@@ -45,9 +45,10 @@ const clients = new Set();
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   clients.add(ws);
-  // Enviar pedidos pendientes al conectarse
-  const pending = orders.filter(o => o.status === 'pendiente');
-  ws.send(JSON.stringify({ type: 'init', orders: pending }));
+  // Enviar pedidos pendientes (cocina) y completados (control) al conectarse
+  const pending   = orders.filter(o => o.status === 'pendiente');
+  const completed = orders.filter(o => o.status === 'completado');
+  ws.send(JSON.stringify({ type: 'init', orders: pending, completed }));
 
   ws.on('close', () => clients.delete(ws));
   ws.on('error', () => clients.delete(ws));
@@ -91,7 +92,8 @@ app.post('/pedido/:id/completar', (req, res) => {
   const order = orders.find(o => o.id === id);
   if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
   order.status = 'completado';
-  broadcast({ type: 'order_complete', id });
+  order.completedAt = Date.now();
+  broadcast({ type: 'order_complete', id, completedAt: order.completedAt });
   res.json({ success: true });
 });
 
@@ -103,6 +105,7 @@ app.get('/pedidos', (req, res) => {
 // Limpiar todos los pedidos completados
 app.delete('/pedidos/completados', (req, res) => {
   orders = orders.filter(o => o.status === 'pendiente');
+  broadcast({ type: 'history_cleared' });
   res.json({ success: true });
 });
 
