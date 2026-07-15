@@ -59,6 +59,19 @@
     }
     .header-left { display: flex; align-items: center; gap: 0.75rem; }
     .logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.09em; line-height: 1; }
+    /* Logo del negocio */
+    .brand-logo { height: 1.9rem; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2)); }
+    .logo-tag {
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.16em;
+      text-transform: uppercase; color: #fff; line-height: 1;
+      padding-left: 0.85rem; border-left: 2px solid rgba(255,255,255,0.35);
+    }
+    /* Íconos SVG de línea (coherentes en todo el panel) */
+    .i {
+      width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round; flex: none;
+    }
     .status-row { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem; }
     .status-dot {
       width: 8px; height: 8px; border-radius: 50%;
@@ -221,6 +234,10 @@
       50%     { box-shadow: 0 0 0 3px rgba(251,62,44,0.55), var(--shadow-lg); }
     }
     .comanda-card.new-order { animation: slideIn 0.4s ease both, flash 0.9s ease 2; }
+    /* Entrada en blanco → luego transiciona a los colores del semáforo */
+    .comanda-card.entering::before { background: #dfe3e8 !important; }
+    .comanda-card.entering .time-fill { height: 0 !important; }
+    .comanda-card.entering .order-time { background: var(--surface-2) !important; color: var(--ink-soft) !important; }
     @keyframes slideIn { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes flash { 0%,100% { box-shadow: var(--shadow); } 50% { box-shadow: 0 0 0 3px rgba(251,62,44,0.5), var(--shadow-lg); } }
     /* Todos los ítems marcados → invita a cerrar */
@@ -417,6 +434,7 @@
       font-weight: 600; font-size: 0.9rem;
       box-shadow: var(--shadow-lg);
       animation: toastIn 0.3s ease both;
+      display: flex; align-items: center; gap: 0.5rem;
     }
     @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
@@ -442,8 +460,9 @@
   <!-- HEADER -->
   <header>
     <div class="header-left">
-      <div style="display:flex;flex-direction:column">
-        <span class="logo-text">🍽️ Comandas</span>
+      <img src="logo.png" alt="Coraje" class="brand-logo" />
+      <div style="display:flex;flex-direction:column;gap:0.25rem">
+        <span class="logo-tag">Comandas</span>
         <div class="status-row">
           <div class="status-dot" id="statusDot"></div>
           <span class="status-label" id="statusLabel">Conectando...</span>
@@ -456,7 +475,8 @@
         <span class="lbl">En<br>cocina</span>
       </div>
       <button class="history-toggle" onclick="toggleHistory()" title="Pedidos anteriores (control)">
-        📋 Anteriores <span class="badge" id="historyBadge">0</span>
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg>
+        Anteriores <span class="badge" id="historyBadge">0</span>
       </button>
     </div>
   </header>
@@ -464,25 +484,26 @@
   <!-- TOOLBAR -->
   <div class="toolbar">
     <div class="search-box">
-      <span style="color:var(--muted)">🔎</span>
-      <input type="text" id="filterMesa" placeholder="Filtrar por mesa..." oninput="onFilterInput(this.value)" />
+      <span style="color:var(--muted);display:inline-flex"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+      <input type="text" id="filterMesa" placeholder="Filtrar por mesa o nombre..." oninput="onFilterInput(this.value)" />
       <button class="clear-x" id="clearFilter" onclick="clearFilter()" style="display:none">×</button>
     </div>
     <button class="sort-btn" id="sortBtn" onclick="toggleSort()">
-      <span id="sortIcon">🕒</span><span id="sortLabel">Recientes primero</span>
+      <svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M7 4L4 7M7 4l3 3"/><path d="M17 20V4M17 20l-3-3M17 20l3-3"/></svg>
+      <span id="sortLabel">Recientes primero</span>
     </button>
     <div class="toolbar-spacer"></div>
     <div class="legend">
-      <span><span class="dot ok"></span>A tiempo · 0–5 min</span>
-      <span><span class="dot warn"></span>Apúrate · 5–10 min</span>
-      <span><span class="dot late"></span>¡Límite! · 10 min</span>
+      <span><span class="dot ok"></span>A tiempo · 0–1:40</span>
+      <span><span class="dot warn"></span>Apúrate · 1:40–3:20</span>
+      <span><span class="dot late"></span>¡Al límite! · 5 min</span>
     </div>
   </div>
 
   <!-- ORDERS -->
   <div class="orders-grid" id="ordersGrid">
     <div class="empty-state" id="emptyState">
-      <span class="icon">⏳</span>
+      <span class="icon"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
       <p>Esperando pedidos...</p>
       <p style="font-size:0.82rem">Los pedidos de los clientes aparecerán aquí</p>
     </div>
@@ -493,7 +514,7 @@
   <aside class="history-drawer" id="historyDrawer" aria-hidden="true">
     <div class="drawer-head">
       <div>
-        <h2>📋 Pedidos anteriores</h2>
+        <h2><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg> Pedidos anteriores</h2>
         <div class="sub">Historial de control · pedidos ya entregados</div>
       </div>
       <button class="drawer-close" onclick="toggleHistory()">×</button>
@@ -502,7 +523,7 @@
       <div class="drawer-empty" id="historyEmpty">Aún no hay pedidos completados.</div>
     </div>
     <div class="drawer-foot">
-      <button class="clear-history-btn" onclick="clearCompleted()">🗑 Limpiar historial</button>
+      <button class="clear-history-btn" onclick="clearCompleted()"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6M14 11v6"/></svg> Limpiar historial</button>
     </div>
   </aside>
 
@@ -527,11 +548,33 @@
     let ws;
     let reconnectTimer;
 
+    // ── Íconos SVG de línea (estéticos y coherentes) ──
+    const ICN = {
+      clock:   '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+      search:  '<svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+      sort:    '<svg class="i" viewBox="0 0 24 24"><path d="M7 4v16M7 4L4 7M7 4l3 3"/><path d="M17 20V4M17 20l-3-3M17 20l3-3"/></svg>',
+      check:   '<svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>',
+      checkCircle:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
+      receipt: '<svg class="i" viewBox="0 0 24 24"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
+      user:    '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+      note:    '<svg class="i" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>',
+      pin:     '<svg class="i" viewBox="0 0 24 24"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+      phone:   '<svg class="i" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 11a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg>',
+      history: '<svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg>',
+      bell:    '<svg class="i" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
+      trash:   '<svg class="i" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6M14 11v6"/></svg>',
+      alert:   '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>',
+      // Tipos de pedido
+      table:   '<svg class="i" viewBox="0 0 24 24"><path d="M6 3v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2V3M8 12v9"/><path d="M17 3c-1.7 0-3 1.8-3 5v4h3zM17 12v9"/></svg>',
+      truck:   '<svg class="i" viewBox="0 0 24 24"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>',
+      bag:     '<svg class="i" viewBox="0 0 24 24"><path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>',
+    };
+
     // Tipos de pedido — el color aquí es solo del chip (el tiempo usa el semáforo)
     const TIPOS = {
-      mesa:      { icon: '🍽️', label: 'En mesa',     color: '#2563eb' },
-      domicilio: { icon: '🛵', label: 'Domicilio',   color: '#7c3aed' },
-      llevar:    { icon: '🥡', label: 'Para llevar',  color: '#ea580c' },
+      mesa:      { icon: ICN.table, label: 'En mesa',     color: '#2563eb' },
+      domicilio: { icon: ICN.truck, label: 'Domicilio',   color: '#7c3aed' },
+      llevar:    { icon: ICN.bag,   label: 'Para llevar',  color: '#ea580c' },
     };
     function tipoDe(o) { return TIPOS[o.tipo] ? o.tipo : (o.mesa ? 'mesa' : 'llevar'); }
     function hexA(hex, a) {
@@ -542,11 +585,12 @@
     let filterMesa = '';
     let sortOrder = 'recent'; // 'recent' | 'old'
 
-    // Umbrales del semáforo en minutos. Ajustables por URL para pruebas:
-    //   comanda.html?warn=0.3&late=0.6  → se llena en ~40 s
+    // Semáforo: el pedido debe salir en MAX_MIN minutos, dividido en 3 fases iguales.
+    // Ajustable por URL para pruebas: comanda.html?max=1  → se ve todo en 1 minuto
     const _p = new URLSearchParams(location.search);
-    const WARN_MIN = parseFloat(_p.get('warn')) || 5;
-    const LATE_MIN = parseFloat(_p.get('late')) || 10;
+    const MAX_MIN  = parseFloat(_p.get('max'))  || 5;             // salida máxima (rojo lleno)
+    const WARN_MIN = parseFloat(_p.get('warn')) || MAX_MIN / 3;   // fin fase verde
+    const LATE_MIN = parseFloat(_p.get('late')) || MAX_MIN * 2/3; // fin fase naranja → rojo
 
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -570,7 +614,7 @@
           addOrder(msg.order, true);
           applyFilterSort();
           playBell();
-          showToast(`🔔 Nuevo pedido — Mesa ${msg.order.mesa}`);
+          showToast(`${ICN.bell} Nuevo pedido${msg.order.mesa ? ' — Mesa ' + msg.order.mesa : ''}`);
           updateCount();
         } else if (msg.type === 'order_complete') {
           archiveOrder(msg.id, msg.completedAt);
@@ -621,14 +665,14 @@
       if (empty) empty.remove();
 
       const card = document.createElement('div');
-      card.className = 'comanda-card' + (isNew ? ' new-order' : '');
+      card.className = 'comanda-card entering' + (isNew ? ' new-order' : '');
       card.id = 'order-' + order.id;
       card.dataset.id = order.id;
 
       const itemsHTML = order.items.map(i => {
         const line = (Number(i.price) || 0) * (Number(i.qty) || 0);
         return `<div class="item-row" onclick="toggleItem(this)">
-          <span class="item-check">✓</span>
+          <span class="item-check">${ICN.check}</span>
           <span class="item-qty">${i.qty}×</span>
           <span class="item-name">${i.name}</span>
           ${line > 0 ? `<span class="item-price">${fmtCOP(line)}</span>` : ''}
@@ -644,8 +688,8 @@
 
       const metaHTML = (order.nombre || order.notas) ? `
         <div class="card-meta">
-          ${order.nombre ? `<span>👤 <strong>${order.nombre}</strong></span>` : ''}
-          ${order.notas  ? `<span>📝 ${order.notas}</span>` : ''}
+          ${order.nombre ? `<span>${ICN.user} <strong>${order.nombre}</strong></span>` : ''}
+          ${order.notas  ? `<span>${ICN.note} ${order.notas}</span>` : ''}
         </div>` : '';
 
       const nItems = order.items.length;
@@ -660,8 +704,8 @@
       const locHTML = tp === 'domicilio' ? `
         <div class="card-loc">
           <span class="lbl">Entrega</span>
-          ${order.direccion ? `<span>📍 <strong>${order.direccion}</strong></span>` : ''}
-          ${order.telefono  ? `<span>📞 ${order.telefono}</span>` : ''}
+          ${order.direccion ? `<span>${ICN.pin} <strong>${order.direccion}</strong></span>` : ''}
+          ${order.telefono  ? `<span>${ICN.phone} ${order.telefono}</span>` : ''}
         </div>` : '';
 
       card.innerHTML = `
@@ -672,7 +716,7 @@
             <span class="mesa-label">${titleMain}</span>
             <span class="order-sub">Pedido #${order.id}</span>
           </div>
-          <div class="order-time">⏱ <span class="time-val">${formatTime(order.timestamp)}</span></div>
+          <div class="order-time">${ICN.clock} <span class="time-val">${formatTime(order.timestamp)}</span></div>
         </div>
         <div class="card-body">
           ${locHTML}
@@ -681,8 +725,8 @@
           ${metaHTML}
           <div class="btn-row">
             <span class="progress-pill">0/${nItems} listos</span>
-            <button class="complete-btn" onclick="completeOrder(${order.id})">✓ Listo</button>
-            <button class="invoice-btn" id="inv-btn-${order.id}" onclick="toggleInvoice(${order.id})">🧾</button>
+            <button class="complete-btn" onclick="completeOrder(${order.id})">${ICN.check} Listo</button>
+            <button class="invoice-btn" id="inv-btn-${order.id}" onclick="toggleInvoice(${order.id})">${ICN.receipt}</button>
           </div>
           <div class="invoice-form" id="inv-form-${order.id}">
             <input type="text" id="inv-nit-${order.id}" placeholder="NIT/CC (vacío = consumidor final)" value="${order.nit || ''}" />
@@ -692,6 +736,11 @@
 
       grid.appendChild(card);
       updateCardAge(card, order);
+      // Entra en blanco y, tras un instante, transiciona a los colores del semáforo
+      setTimeout(() => {
+        card.classList.remove('entering');
+        updateCardAge(card, order);
+      }, 550);
     }
 
     // Marca / desmarca un ítem individual (ayuda visual para cocina)
@@ -720,7 +769,7 @@
       // Semáforo: la comanda se llena de color desde abajo con el tiempo
       const fill = card.querySelector('.time-fill');
       if (fill) {
-        const progress = Math.min(mins / LATE_MIN, 1);   // 0 → 100% en 10 min
+        const progress = Math.min(mins / MAX_MIN, 1);    // se llena al 100% al llegar a la salida
         fill.style.height = (progress * 100).toFixed(1) + '%';
         const color = late ? 'rgba(251,62,44,0.24)'       // 🔴 rojo — llegó al límite (10 min)
                     : warn ? 'rgba(249,115,22,0.22)'       // 🟠 naranja — apúrate (5–10 min)
@@ -774,7 +823,7 @@
       const div = document.createElement('div');
       div.id = 'noMatch';
       div.className = 'empty-state';
-      div.innerHTML = `<span class="icon">🔍</span><p>Sin coincidencias</p><p style="font-size:0.82rem">Ninguna mesa coincide con “${filterMesa}”</p>`;
+      div.innerHTML = `<span class="icon">${ICN.search}</span><p>Sin coincidencias</p><p style="font-size:0.82rem">Nada coincide con “${filterMesa}”</p>`;
       grid.appendChild(div);
     }
     function removeNoMatch() { const n = document.getElementById('noMatch'); if (n) n.remove(); }
@@ -805,7 +854,7 @@
         const div = document.createElement('div');
         div.id = 'emptyState';
         div.className = 'empty-state';
-        div.innerHTML = '<span class="icon">✅</span><p>Todo al día</p><p style="font-size:0.82rem">Sin pedidos pendientes</p>';
+        div.innerHTML = `<span class="icon" style="color:var(--green)">${ICN.checkCircle}</span><p>Todo al día</p><p style="font-size:0.82rem">Sin pedidos pendientes</p>`;
         grid.appendChild(div);
       }
     }
@@ -853,15 +902,15 @@
         const T = TIPOS[tp];
         const histTitle = tp === 'mesa' ? `Mesa ${o.mesa}` : (o.nombre || T.label);
         const cliente = (tp !== 'mesa' && o.nombre) ? '' :
-          (o.nombre ? `<div class="hist-line" style="color:var(--ink-soft)">👤 ${o.nombre}</div>` : '');
+          (o.nombre ? `<div class="hist-line" style="color:var(--ink-soft)">${ICN.user} ${o.nombre}</div>` : '');
         const dirLine = (tp === 'domicilio' && o.direccion)
-          ? `<div class="hist-line" style="color:var(--ink-soft)">📍 ${o.direccion}${o.telefono ? ' · 📞 ' + o.telefono : ''}</div>` : '';
-        const invBadge = o.facturado ? `<span class="hist-badge inv">🧾 Facturado${o.facturaNum ? ' ' + o.facturaNum : ''}</span>` : '';
+          ? `<div class="hist-line" style="color:var(--ink-soft)">${ICN.pin} ${o.direccion}${o.telefono ? ' · ' + o.telefono : ''}</div>` : '';
+        const invBadge = o.facturado ? `<span class="hist-badge inv">${ICN.receipt} Facturado${o.facturaNum ? ' ' + o.facturaNum : ''}</span>` : '';
         return `
           <div class="hist-card">
             <div class="hist-head">
               <span class="hist-mesa">${T.icon} ${histTitle}</span>
-              <span class="hist-when"><span class="check">✓ Entregado</span><br>${clockTime(o.completedAt || o.timestamp)} · #${o.id}</span>
+              <span class="hist-when"><span class="check">${ICN.check} Entregado</span><br>${clockTime(o.completedAt || o.timestamp)} · #${o.id}</span>
             </div>
             <div class="hist-body">
               ${lines}
@@ -904,7 +953,6 @@
       sortOrder = sortOrder === 'recent' ? 'old' : 'recent';
       document.getElementById('sortLabel').textContent =
         sortOrder === 'recent' ? 'Recientes primero' : 'Antiguos primero';
-      document.getElementById('sortIcon').textContent = sortOrder === 'recent' ? '🕒' : '⏳';
       applyFilterSort();
     }
 
@@ -929,7 +977,7 @@
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
       toast.className = 'toast';
-      toast.textContent = msg;
+      toast.innerHTML = msg;
       container.appendChild(toast);
       setTimeout(() => {
         toast.style.transition = 'opacity 0.3s';
@@ -954,7 +1002,7 @@
     async function facturarOrder(id) {
       const nit = document.getElementById('inv-nit-' + id)?.value?.trim() || '';
       const btn = document.getElementById('inv-btn-' + id);
-      if (btn) { btn.textContent = '...'; btn.disabled = true; }
+      if (btn) { btn.innerHTML = '…'; btn.disabled = true; }
 
       try {
         const res = await fetch(`/facturar/${id}`, {
@@ -964,19 +1012,19 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast(`✅ Factura ${data.number} emitida`);
+          showToast(`${ICN.checkCircle} Factura ${data.number} emitida`);
           const card = document.getElementById('order-' + id);
           if (card) card.classList.add('invoiced');
           if (orders[id]) { orders[id].facturado = true; orders[id].facturaNum = data.number; }
-          if (btn) { btn.textContent = '✓'; btn.classList.add('done'); btn.disabled = false; }
+          if (btn) { btn.innerHTML = ICN.check; btn.classList.add('done'); btn.disabled = false; }
           document.getElementById('inv-form-' + id).style.display = 'none';
         } else {
-          showToast(`❌ ${data.error || 'Error al facturar'}`);
-          if (btn) { btn.textContent = '🧾'; btn.disabled = false; }
+          showToast(`${ICN.alert} ${data.error || 'Error al facturar'}`);
+          if (btn) { btn.innerHTML = ICN.receipt; btn.disabled = false; }
         }
       } catch {
-        showToast('❌ Error de conexión con Factus');
-        if (btn) { btn.textContent = '🧾'; btn.disabled = false; }
+        showToast(`${ICN.alert} Error de conexión con Factus`);
+        if (btn) { btn.innerHTML = ICN.receipt; btn.disabled = false; }
       }
     }
 

@@ -65,7 +65,7 @@ function broadcast(msg) {
 
 // Recibir nuevo pedido
 app.post('/pedido', (req, res) => {
-  const { mesa, items, nombre, notas, nit, email, tipo, direccion, telefono } = req.body;
+  const { mesa, items, nombre, notas, nit, email, tipo, direccion, telefono, agoMin } = req.body;
 
   // Tipo de pedido: 'mesa' | 'domicilio' | 'llevar' (si no llega, se deduce)
   const tipoOk = ['mesa', 'domicilio', 'llevar'];
@@ -89,7 +89,8 @@ app.post('/pedido', (req, res) => {
     notas:  (notas  || '').trim(),
     nit:    (nit    || '').trim(),
     email:  (email  || '').trim(),
-    timestamp: Date.now(),
+    // agoMin: opcional, backdatar el pedido N minutos (útil para pruebas/siembra)
+    timestamp: Date.now() - (Number(agoMin) > 0 ? Number(agoMin) * 60000 : 0),
     status: 'pendiente',
     facturado: false,
   };
