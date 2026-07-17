@@ -253,6 +253,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`║  Red local: http://${ip}:${PORT}         `);
   console.log(`║  Menú:      http://${ip}:${PORT}/menu.html`);
   console.log(`║  Comandas:  http://${ip}:${PORT}/comanda.html`);
+  console.log(`║  Admin:     http://${ip}:${PORT}/admin.html`);
   console.log(`║  QR Codes:  http://${ip}:${PORT}/qr.html`);
   console.log('╚════════════════════════════════════════╝');
   console.log(`🔒 Acceso por PIN — cocina: ${PINS.cocina}  ·  admin: ${PINS.admin}`);

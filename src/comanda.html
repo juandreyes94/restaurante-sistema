@@ -216,13 +216,13 @@
     /* Bloque de entrega (solo domicilio) */
     .card-loc {
       margin: 0 0 0.7rem; padding: 0.6rem 0.75rem;
-      background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.18);
+      background: rgba(13,148,136,0.08); border: 1px solid rgba(13,148,136,0.20);
       border-radius: 12px;
       display: flex; flex-direction: column; gap: 0.3rem;
       font-size: 0.9rem; color: var(--ink);
     }
     .card-loc strong { color: var(--ink); }
-    .card-loc .lbl { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: #7c3aed; font-weight: 700; }
+    .card-loc .lbl { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: #0d9488; font-weight: 700; }
     .comanda-card.age-warn::before { background: var(--orange); }
     .comanda-card.age-late::before { background: var(--red); }
     .comanda-card.age-late {
@@ -463,8 +463,12 @@
     .login-card img { height: 2.4rem; width: auto; margin-bottom: 0.6rem; }
     .login-card h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; color: var(--ink); }
     .login-card p { color: var(--ink-soft); font-size: 0.85rem; margin-top: 0.2rem; }
+    .role-tabs { display: flex; gap: 0.4rem; margin-top: 1.1rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.3rem; }
+    .role-tab { flex: 1; padding: 0.55rem; border: none; border-radius: 9px; background: transparent; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--ink-soft); transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+    .role-tab.active { background: var(--red); color: #fff; box-shadow: 0 2px 8px rgba(251,62,44,0.35); }
+    .role-tab .i { width: 1.1em; height: 1.1em; }
     .pin-input {
-      width: 100%; margin-top: 1.25rem; padding: 0.9rem;
+      width: 100%; margin-top: 0.8rem; padding: 0.9rem;
       text-align: center; font-size: 1.8rem; letter-spacing: 0.5em;
       font-family: 'Bebas Neue', sans-serif;
       border: 2px solid var(--border); border-radius: 12px;
@@ -500,8 +504,14 @@
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
       <img src="logo.png" alt="Coraje" />
-      <h1>Comandas · Cocina</h1>
-      <p>Ingresa tu PIN para continuar</p>
+      <h1>Ingreso</h1>
+      <p>Elige tu acceso e ingresa el código</p>
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="cocina" onclick="pickRole('cocina')">
+          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
+        <button class="role-tab" data-role="admin" onclick="pickRole('admin')">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
+      </div>
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric"
              autocomplete="off" placeholder="••••" maxlength="8"
              onkeydown="if(event.key==='Enter')doLogin()" />
@@ -627,7 +637,7 @@
     // Tipos de pedido — el color aquí es solo del chip (el tiempo usa el semáforo)
     const TIPOS = {
       mesa:      { icon: ICN.table, label: 'En mesa',     color: '#2563eb' },
-      domicilio: { icon: ICN.truck, label: 'Domicilio',   color: '#7c3aed' },
+      domicilio: { icon: ICN.truck, label: 'Domicilio',   color: '#0d9488' },
       llevar:    { icon: ICN.bag,   label: 'Para llevar',  color: '#ea580c' },
     };
     function tipoDe(o) { return TIPOS[o.tipo] ? o.tipo : (o.mesa ? 'mesa' : 'llevar'); }
@@ -657,6 +667,13 @@
       document.getElementById('loginOverlay').style.display = 'none';
       connect();
     }
+    const PAGE_ROLE = 'cocina';
+    let selRole = 'cocina';
+    function pickRole(r) {
+      selRole = r;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
+      document.getElementById('pinInput').focus();
+    }
     function boot() {
       const a = getAuth();
       if (a && a.token && (a.role === 'cocina' || a.role === 'admin')) {
@@ -676,12 +693,13 @@
           body: JSON.stringify({ pin: input.value.trim() }),
         });
         const data = await res.json();
-        if (data.ok && (data.role === 'cocina' || data.role === 'admin')) {
-          localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
-          startApp();
-        } else { throw new Error(); }
-      } catch {
-        input.classList.add('err'); err.textContent = 'PIN incorrecto';
+        if (!data.ok) throw new Error('Código incorrecto');
+        if (data.role !== selRole) throw new Error(`Ese código no es de ${selRole === 'admin' ? 'Administrador' : 'Cocina'}`);
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
+        if (selRole === 'admin') location.href = 'admin.html';
+        else startApp();
+      } catch (e) {
+        input.classList.add('err'); err.textContent = e.message || 'Código incorrecto';
         input.value = ''; input.focus();
         setTimeout(() => input.classList.remove('err'), 400);
       }
