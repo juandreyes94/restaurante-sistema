@@ -448,6 +448,45 @@
     .spinner { width: 42px; height: 42px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--red); animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Pantalla de acceso (PIN) ── */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: linear-gradient(140deg, var(--red), var(--red-dark));
+      display: none; align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .login-card {
+      background: var(--surface); border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      width: 100%; max-width: 360px; padding: 2rem 1.75rem;
+      text-align: center; animation: slideIn 0.4s ease both;
+    }
+    .login-card img { height: 2.4rem; width: auto; margin-bottom: 0.6rem; }
+    .login-card h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; color: var(--ink); }
+    .login-card p { color: var(--ink-soft); font-size: 0.85rem; margin-top: 0.2rem; }
+    .pin-input {
+      width: 100%; margin-top: 1.25rem; padding: 0.9rem;
+      text-align: center; font-size: 1.8rem; letter-spacing: 0.5em;
+      font-family: 'Bebas Neue', sans-serif;
+      border: 2px solid var(--border); border-radius: 12px;
+      color: var(--ink); background: var(--surface-2); outline: none;
+      transition: border-color 0.2s;
+    }
+    .pin-input:focus { border-color: var(--red); }
+    .pin-input.err { border-color: var(--red); animation: shake 0.35s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+    .login-btn {
+      width: 100%; margin-top: 1rem; padding: 0.85rem;
+      background: var(--red); color: #fff; border: none; border-radius: 12px;
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 0.08em;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .login-btn:hover { background: var(--red-dark); }
+    .login-err { color: var(--red); font-size: 0.82rem; margin-top: 0.7rem; min-height: 1.1rem; font-weight: 600; }
+    .logout-btn {
+      background: rgba(0,0,0,0.16); color: #fff; border: none; border-radius: 8px;
+      font-size: 0.68rem; padding: 0.2rem 0.5rem; cursor: pointer; margin-top: 0.3rem;
+    }
+
     @media (max-width: 520px) {
       .toolbar { top: 62px; }
       .legend { display: none; }
@@ -457,15 +496,30 @@
 
 <body>
 
+  <!-- PANTALLA DE ACCESO (PIN) -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <img src="logo.png" alt="Coraje" />
+      <h1>Comandas · Cocina</h1>
+      <p>Ingresa tu PIN para continuar</p>
+      <input class="pin-input" id="pinInput" type="password" inputmode="numeric"
+             autocomplete="off" placeholder="••••" maxlength="8"
+             onkeydown="if(event.key==='Enter')doLogin()" />
+      <button class="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+
   <!-- HEADER -->
   <header>
     <div class="header-left">
       <img src="logo.png" alt="Coraje" class="brand-logo" />
-      <div style="display:flex;flex-direction:column;gap:0.25rem">
+      <div style="display:flex;flex-direction:column;gap:0.2rem">
         <span class="logo-tag">Comandas</span>
         <div class="status-row">
           <div class="status-dot" id="statusDot"></div>
           <span class="status-label" id="statusLabel">Conectando...</span>
+          <button class="logout-btn" onclick="logout()" style="margin-top:0">Salir</button>
         </div>
       </div>
     </div>
@@ -591,6 +645,51 @@
     const MAX_MIN  = parseFloat(_p.get('max'))  || 5;             // salida máxima (rojo lleno)
     const WARN_MIN = parseFloat(_p.get('warn')) || MAX_MIN / 3;   // fin fase verde
     const LATE_MIN = parseFloat(_p.get('late')) || MAX_MIN * 2/3; // fin fase naranja → rojo
+
+    // ── Acceso por PIN ──
+    const AUTH_KEY = 'coraje_auth';
+    function getAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } }
+    function authHeaders() { const a = getAuth(); return a?.token ? { 'x-auth-token': a.token } : {}; }
+
+    let _started = false;
+    function startApp() {
+      if (_started) return; _started = true;
+      document.getElementById('loginOverlay').style.display = 'none';
+      connect();
+    }
+    function boot() {
+      const a = getAuth();
+      if (a && a.token && (a.role === 'cocina' || a.role === 'admin')) {
+        startApp();
+      } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        setTimeout(() => document.getElementById('pinInput').focus(), 100);
+      }
+    }
+    async function doLogin() {
+      const input = document.getElementById('pinInput');
+      const err = document.getElementById('loginErr');
+      err.textContent = '';
+      try {
+        const res = await fetch('/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: input.value.trim() }),
+        });
+        const data = await res.json();
+        if (data.ok && (data.role === 'cocina' || data.role === 'admin')) {
+          localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
+          startApp();
+        } else { throw new Error(); }
+      } catch {
+        input.classList.add('err'); err.textContent = 'PIN incorrecto';
+        input.value = ''; input.focus();
+        setTimeout(() => input.classList.remove('err'), 400);
+      }
+    }
+    function logout() {
+      localStorage.removeItem(AUTH_KEY);
+      location.reload();
+    }
 
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -958,7 +1057,7 @@
 
     async function completeOrder(id) {
       try {
-        await fetch(`/pedido/${id}/completar`, { method: 'POST' });
+        await fetch(`/pedido/${id}/completar`, { method: 'POST', headers: authHeaders() });
         archiveOrder(id, Date.now());
         removeOrder(id);
         updateCount();
@@ -968,7 +1067,7 @@
     }
 
     async function clearCompleted() {
-      await fetch('/pedidos/completados', { method: 'DELETE' });
+      await fetch('/pedidos/completados', { method: 'DELETE', headers: authHeaders() });
       for (const k in history) delete history[k];
       renderHistory();
     }
@@ -1007,7 +1106,7 @@
       try {
         const res = await fetch(`/facturar/${id}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ nit }),
         });
         const data = await res.json();
@@ -1028,7 +1127,7 @@
       }
     }
 
-    connect();
+    boot();
   </script>
 
 </body>

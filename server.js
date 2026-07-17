@@ -3,6 +3,8 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
+const store = require('./store');
 const factusConfig = require('./factus.config.js');
 
 // ── Factus token cache (requiere Node 18+ para fetch nativo) ──
@@ -37,18 +39,42 @@ const wss = new WebSocketServer({ server });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'src')));
 
-// ── Almacenamiento en memoria ──
-let orders = [];
-let nextId = 1;
 const clients = new Set();
+
+// ── Acceso por PIN (rol) ──
+// Cambia los PIN con variables de entorno PIN_COCINA / PIN_ADMIN, o aquí.
+const PINS = {
+  cocina: process.env.PIN_COCINA || '1234',
+  admin:  process.env.PIN_ADMIN  || '9876',
+};
+const _tokens = new Map(); // token -> role
+
+app.post('/login', (req, res) => {
+  const pin = String(req.body?.pin || '').trim();
+  const role = Object.keys(PINS).find(r => PINS[r] === pin);
+  if (!role) return res.status(401).json({ error: 'PIN incorrecto' });
+  const token = crypto.randomBytes(16).toString('hex');
+  _tokens.set(token, role);
+  res.json({ ok: true, role, token });
+});
+
+// Middleware para proteger rutas por rol (se aplicará al separar el panel admin)
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const role = _tokens.get(req.get('x-auth-token') || '');
+    if (!role || !roles.includes(role)) {
+      return res.status(403).json({ error: 'Acceso no autorizado' });
+    }
+    req.role = role;
+    next();
+  };
+}
 
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   clients.add(ws);
   // Enviar pedidos pendientes (cocina) y completados (control) al conectarse
-  const pending   = orders.filter(o => o.status === 'pendiente');
-  const completed = orders.filter(o => o.status === 'completado');
-  ws.send(JSON.stringify({ type: 'init', orders: pending, completed }));
+  ws.send(JSON.stringify({ type: 'init', orders: store.pendientes(), completed: store.completados() }));
 
   ws.on('close', () => clients.delete(ws));
   ws.on('error', () => clients.delete(ws));
@@ -78,8 +104,7 @@ app.post('/pedido', (req, res) => {
     return res.status(400).json({ error: 'Falta el número de mesa' });
   }
 
-  const order = {
-    id: nextId++,
+  const order = store.add({
     tipo: tipoVal,
     mesa: String(mesa || ''),
     direccion: (direccion || '').trim(),
@@ -93,8 +118,7 @@ app.post('/pedido', (req, res) => {
     timestamp: Date.now() - (Number(agoMin) > 0 ? Number(agoMin) * 60000 : 0),
     status: 'pendiente',
     facturado: false,
-  };
-  orders.push(order);
+  });
   broadcast({ type: 'new_order', order });
   res.json({ success: true, id: order.id });
 });
@@ -102,22 +126,23 @@ app.post('/pedido', (req, res) => {
 // Marcar pedido como completado
 app.post('/pedido/:id/completar', (req, res) => {
   const id = parseInt(req.params.id);
-  const order = orders.find(o => o.id === id);
+  const order = store.get(id);
   if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
   order.status = 'completado';
   order.completedAt = Date.now();
+  store.save();
   broadcast({ type: 'order_complete', id, completedAt: order.completedAt });
   res.json({ success: true });
 });
 
 // Listar pedidos pendientes
 app.get('/pedidos', (req, res) => {
-  res.json(orders.filter(o => o.status === 'pendiente'));
+  res.json(store.pendientes());
 });
 
 // Limpiar todos los pedidos completados
 app.delete('/pedidos/completados', (req, res) => {
-  orders = orders.filter(o => o.status === 'pendiente');
+  store.clearCompletados();
   broadcast({ type: 'history_cleared' });
   res.json({ success: true });
 });
@@ -129,7 +154,7 @@ app.post('/facturar/:id', async (req, res) => {
   }
 
   const id = parseInt(req.params.id);
-  const order = orders.find(o => o.id === id);
+  const order = store.get(id);
   if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
 
   const nit    = (req.body?.nit || order.nit || '').trim() || '222222222222';
@@ -193,6 +218,7 @@ app.post('/facturar/:id', async (req, res) => {
       order.facturado = true;
       order.cufe = bill.cufe;
       order.facturaNum = bill.number;
+      store.save();
       broadcast({ type: 'order_invoiced', id: order.id, number: bill.number });
       return res.json({ success: true, cufe: bill.cufe, number: bill.number });
     }
@@ -228,5 +254,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`║  Menú:      http://${ip}:${PORT}/menu.html`);
   console.log(`║  Comandas:  http://${ip}:${PORT}/comanda.html`);
   console.log(`║  QR Codes:  http://${ip}:${PORT}/qr.html`);
-  console.log('╚════════════════════════════════════════╝\n');
+  console.log('╚════════════════════════════════════════╝');
+  console.log(`🔒 Acceso por PIN — cocina: ${PINS.cocina}  ·  admin: ${PINS.admin}`);
+  console.log('💾 Datos persistentes en ./data/db.json\n');
 });
