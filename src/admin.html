@@ -189,8 +189,34 @@
     .login-btn:hover { background:var(--red-dark); }
     .login-err { color:var(--red); font-size:0.82rem; margin-top:0.7rem; min-height:1.1rem; font-weight:600; }
 
+    /* ── Productos ── */
+    .prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:0.9rem; margin-bottom:1.4rem; }
+    .prod-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:0.9rem 1rem; display:flex; flex-direction:column; gap:0.7rem; }
+    .prod-card.off { opacity:0.55; }
+    .prod-img { width:100%; height:130px; object-fit:cover; border-radius:10px; }
+    .prod-img.emoji { display:flex; align-items:center; justify-content:center; font-size:3rem; background:var(--surface-2); }
+    .prod-top { display:flex; align-items:baseline; justify-content:space-between; gap:0.5rem; }
+    .prod-top b { font-size:0.95rem; }
+    .prod-price { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; color:var(--red); white-space:nowrap; }
+    .prod-combo { font-size:0.72rem; font-weight:700; color:var(--green-dark); background:rgba(22,163,74,0.12); padding:0.15rem 0.5rem; border-radius:999px; width:fit-content; }
+    .prod-actions { display:flex; gap:0.35rem; flex-wrap:wrap; }
+    .mini { font-size:0.72rem; font-weight:700; padding:0.3rem 0.55rem; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink-soft); cursor:pointer; transition:border-color 0.15s; }
+    .mini.on { background:rgba(22,163,74,0.14); color:var(--green-dark); border-color:transparent; }
+    .mini:hover { border-color:var(--red); }
+    .mini.danger:hover { background:rgba(251,62,44,0.12); color:var(--red); border-color:transparent; }
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; z-index:150; background:rgba(23,29,41,0.45); display:none; align-items:center; justify-content:center; padding:1.5rem; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg); width:100%; max-width:400px; padding:1.5rem; animation:fade 0.2s ease; }
+    .modal h3 { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.03em; margin-bottom:1rem; }
+    .modal label { display:block; font-size:0.8rem; font-weight:600; color:var(--ink-soft); margin-bottom:0.9rem; }
+    .modal label input:not([type=checkbox]) { width:100%; margin-top:0.3rem; padding:0.6rem 0.7rem; border:1px solid var(--border); border-radius:10px; font-size:0.9rem; font-family:inherit; color:var(--ink); background:var(--surface-2); outline:none; }
+    .modal label input:focus { border-color:var(--red); }
+    .modal label.chk { display:flex; align-items:center; gap:0.5rem; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:0.6rem; margin-top:0.3rem; }
+
     /* Toast */
-    .toast { position:fixed; top:1.2rem; right:1.2rem; z-index:150; background:var(--ink); color:#fff; padding:0.8rem 1.2rem; border-radius:12px; font-weight:600; font-size:0.88rem; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:0.5rem; animation:fade 0.25s ease; }
+    .toast { position:fixed; top:1.2rem; right:1.2rem; z-index:160; background:var(--ink); color:#fff; padding:0.8rem 1.2rem; border-radius:12px; font-weight:600; font-size:0.88rem; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:0.5rem; animation:fade 0.25s ease; }
 
     /* Responsive */
     .backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:35; }
@@ -310,6 +336,20 @@
         </table></div></div>
       </section>
 
+      <!-- PRODUCTOS -->
+      <section class="panel" id="p-productos">
+        <div style="display:flex;gap:0.7rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center">
+          <div class="search" style="margin:0;flex:1;min-width:180px">
+            <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="searchProductos" placeholder="Buscar producto o categoría..." oninput="renderProductos()" />
+          </div>
+          <button class="btn primary" onclick="openProducto()">
+            <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Nuevo producto
+          </button>
+        </div>
+        <div id="productosBox"></div>
+      </section>
+
       <!-- COCINA (KDS) -->
       <section class="panel" id="p-cocina">
         <div class="link-cards">
@@ -339,6 +379,25 @@
     </div>
   </div>
 
+  <!-- MODAL PRODUCTO -->
+  <div class="modal-overlay" id="prodModal">
+    <div class="modal">
+      <h3 id="prodModalTitle">Nuevo producto</h3>
+      <label>Nombre<input type="text" id="fNombre" placeholder="Ej. Hamburguesa Coraje" /></label>
+      <label>Categoría<input type="text" id="fCategoria" list="catList" placeholder="Ej. Hamburguesas" /></label>
+      <datalist id="catList"></datalist>
+      <label>Precio (COP)<input type="number" id="fPrecio" min="0" step="500" placeholder="18000" /></label>
+      <label>Precio combo (opcional)<input type="number" id="fCombo" min="0" step="500" placeholder="—" /></label>
+      <label>Imagen (ruta o URL)<input type="text" id="fImagen" placeholder="img/hamburguesa-coraje.jpg" /></label>
+      <label>Descripción / ingredientes<input type="text" id="fDescripcion" placeholder="Pan brioche, carne premium, queso..." /></label>
+      <label class="chk"><input type="checkbox" id="fDisponible" checked /> Disponible</label>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeProducto()">Cancelar</button>
+        <button class="btn primary" onclick="saveProducto()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-tip" id="chartTip"></div>
   <div id="toastBox"></div>
 
@@ -349,7 +408,7 @@
       { id:'mesas', label:'Mesas', icon:'<path d="M4 11h16"/><path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M7 11v9M17 11v9"/>', soon:true },
       { id:'pedidos', label:'Pedidos', icon:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 14h4"/>', panel:'pedidos', badge:true },
       { id:'clientes', label:'Clientes', icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/>', panel:'clientes' },
-      { id:'productos', label:'Productos', icon:'<path d="M3 8.5l9-5 9 5-9 5-9-5z"/><path d="M3 8.5v7l9 5 9-5v-7"/><path d="M12 13.5v7"/>', soon:true },
+      { id:'productos', label:'Productos', icon:'<path d="M3 8.5l9-5 9 5-9 5-9-5z"/><path d="M3 8.5v7l9 5 9-5v-7"/><path d="M12 13.5v7"/>', panel:'productos' },
       { id:'inventario', label:'Inventario', icon:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>', soon:true },
       { id:'cocina', label:'Cocina (KDS)', icon:'<path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/>', panel:'cocina' },
       { id:'creditos', label:'Créditos', icon:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>', soon:true },
@@ -423,7 +482,7 @@
       document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.id===id));
       document.getElementById('pageTitle').textContent=item.label==='Dashboard'?'Dashboard':item.label==='Pedidos'?'Gestión de Pedidos':item.label;
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-      if(item.panel){ document.getElementById('p-'+item.panel).classList.add('active'); }
+      if(item.panel){ document.getElementById('p-'+item.panel).classList.add('active'); if(item.panel==='productos') loadProductos(); }
       else { // módulo futuro
         const g=document.getElementById('p-generic');
         g.innerHTML=`<div class="card"><div class="soon-box"><div class="ic-big">${svg(item.icon)}</div><h2>${item.label}</h2><p>Este módulo está en el plan y se activará próximamente. La estructura y el acceso ya están listos.</p></div></div>`;
@@ -653,6 +712,88 @@
         <tr><td><b>${c.nombre||'—'}</b></td><td>${c.telefono||'—'}</td><td>${c.direccion||'—'}</td>
         <td>${c.pedidos}</td><td class="money">${fmtCOP(c.total)}</td><td>${c.ultimo?clock(c.ultimo)+' · '+new Date(c.ultimo).toLocaleDateString('es-CO'):'—'}</td></tr>`).join('')
         : `<tr class="empty-row"><td colspan="6">Aún no hay clientes registrados. Se irán creando con los pedidos que traigan nombre o teléfono.</td></tr>`;
+    }
+
+    // ── Productos ──
+    let _productos = [];
+    let _editId = null;
+    async function loadProductos(){
+      try { const r = await fetch('/productos'); _productos = await r.json(); }
+      catch { _productos = []; }
+      renderProductos();
+    }
+    function renderProductos(){
+      const q = (document.getElementById('searchProductos').value || '').toLowerCase();
+      const cats = [...new Set(_productos.map(p => p.categoria))].sort();
+      document.getElementById('catList').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+      const list = _productos.filter(p => !q || p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
+      const box = document.getElementById('productosBox');
+      if (!list.length){ box.innerHTML = `<div class="card"><div class="soon-box"><p>No hay productos. Crea el primero con “+ Nuevo producto”.</p></div></div>`; return; }
+      const byCat = {};
+      list.forEach(p => { (byCat[p.categoria] = byCat[p.categoria] || []).push(p); });
+      box.innerHTML = Object.keys(byCat).sort().map(cat => `
+        <div class="section-title">${cat} <span class="count">(${byCat[cat].length})</span></div>
+        <div class="prod-grid">${byCat[cat].map(prodCard).join('')}</div>`).join('');
+    }
+    function prodCard(p){
+      const img = p.imagen
+        ? `<img src="${p.imagen}" alt="${p.nombre}" class="prod-img" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'prod-img emoji',textContent:'${p.emoji||'🍔'}'}))" />`
+        : `<div class="prod-img emoji">${p.emoji||'🍔'}</div>`;
+      const combo = p.precioCombo ? `<span class="prod-combo">Combo ${fmtCOP(p.precioCombo)}</span>` : '';
+      return `<div class="prod-card ${p.disponible?'':'off'}">
+        ${img}
+        <div class="prod-top"><b>${p.nombre}</b><span class="prod-price">${fmtCOP(p.precio)}</span></div>
+        ${combo}
+        <div class="prod-actions">
+          <button class="mini ${p.disponible?'on':''}" onclick="toggleDisp(${p.id})">${p.disponible?'Disponible':'Agotado'}</button>
+          <button class="mini" onclick="openProducto(${p.id})">Editar</button>
+          <button class="mini danger" onclick="delProducto(${p.id})">Eliminar</button>
+        </div></div>`;
+    }
+    function openProducto(id){
+      const p = id ? _productos.find(x => x.id === id) : null;
+      _editId = id || null;
+      document.getElementById('prodModalTitle').textContent = p ? 'Editar producto' : 'Nuevo producto';
+      document.getElementById('fNombre').value = p ? p.nombre : '';
+      document.getElementById('fCategoria').value = p ? p.categoria : '';
+      document.getElementById('fPrecio').value = p ? p.precio : '';
+      document.getElementById('fCombo').value = p && p.precioCombo ? p.precioCombo : '';
+      document.getElementById('fImagen').value = p ? (p.imagen||'') : '';
+      document.getElementById('fDescripcion').value = p ? (p.descripcion||'') : '';
+      document.getElementById('fDisponible').checked = p ? p.disponible : true;
+      document.getElementById('prodModal').classList.add('open');
+      setTimeout(() => document.getElementById('fNombre').focus(), 50);
+    }
+    function closeProducto(){ document.getElementById('prodModal').classList.remove('open'); }
+    async function saveProducto(){
+      const body = {
+        nombre: document.getElementById('fNombre').value.trim(),
+        categoria: document.getElementById('fCategoria').value.trim(),
+        precio: Number(document.getElementById('fPrecio').value) || 0,
+        precioCombo: document.getElementById('fCombo').value ? Number(document.getElementById('fCombo').value) : null,
+        imagen: document.getElementById('fImagen').value.trim(),
+        descripcion: document.getElementById('fDescripcion').value.trim(),
+        disponible: document.getElementById('fDisponible').checked,
+      };
+      if (!body.nombre || !body.categoria){ toast('Nombre y categoría son obligatorios'); return; }
+      const url = _editId ? `/productos/${_editId}` : '/productos';
+      const method = _editId ? 'PUT' : 'POST';
+      try {
+        const r = await fetch(url, { method, headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify(body) });
+        const d = await r.json();
+        if (d.success){ toast('Producto guardado'); closeProducto(); loadProductos(); }
+        else toast('❌ ' + (d.error || 'Error al guardar'));
+      } catch { toast('❌ Error de conexión'); }
+    }
+    async function toggleDisp(id){
+      const p = _productos.find(x => x.id === id); if (!p) return;
+      await fetch(`/productos/${id}`, { method:'PUT', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify({ disponible: !p.disponible }) });
+      loadProductos();
+    }
+    async function delProducto(id){
+      if (!confirm('¿Eliminar este producto del catálogo?')) return;
+      await fetch(`/productos/${id}`, { method:'DELETE', headers: authHeaders() });
+      loadProductos();
     }
 
     async function facturar(id){

@@ -532,7 +532,24 @@
           { id:35, name:'Huevos de Codorniz',             description:'Porción de huevos de codorniz.',                                                                                                                                    price:5000,                     category:'Adiciones',    emoji:'🥚', image:'' },
         ],
 
-        init() {},
+        async init() {
+          // El menú lee del catálogo del panel (una sola fuente). Si falla, usa el listado local.
+          try {
+            const r = await fetch('/productos');
+            if (r.ok) {
+              const prods = await r.json();
+              if (Array.isArray(prods) && prods.length) {
+                this.items = prods
+                  .filter(p => p.disponible !== false)
+                  .map(p => ({
+                    id: p.id, name: p.nombre, description: p.descripcion || '',
+                    price: p.precio, priceCombo: p.precioCombo || undefined,
+                    category: p.categoria, image: p.imagen || '', emoji: p.emoji || ''
+                  }));
+              }
+            }
+          } catch (e) { /* respaldo: listado local */ }
+        },
 
         get categories() {
           return ['Todos', ...new Set(this.items.map(i => i.category))];

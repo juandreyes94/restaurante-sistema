@@ -58,7 +58,7 @@ app.post('/login', (req, res) => {
   res.json({ ok: true, role, token });
 });
 
-// Middleware para proteger rutas por rol (se aplicará al separar el panel admin)
+// Middleware para proteger rutas por rol
 function requireRole(...roles) {
   return (req, res, next) => {
     const role = _tokens.get(req.get('x-auth-token') || '');
@@ -69,6 +69,93 @@ function requireRole(...roles) {
     next();
   };
 }
+
+// ── Catálogo = menú digital real de Coraje (una sola fuente de verdad) ──
+const P = (nombre, categoria, precio, precioCombo, imagen, descripcion, emoji) =>
+  ({ nombre, categoria, precio, precioCombo: precioCombo || null, imagen: imagen || '', descripcion: descripcion || '', emoji: emoji || '', disponible: true });
+store.ensureCatalog([
+  // Chuzos
+  P('Chuzo Desgranado de Panceta','Chuzos',32900,41900,'img/chuzo-desgranado-de-panceta.jpg','Panceta caramelizada, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.'),
+  P('Chuzo Desgranado','Chuzos',35900,44900,'img/chuzo-desgranado.jpg','Res, pollo o mixto, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.'),
+  P('Chuzo Desgranado Pulled Pork','Chuzos',33900,42900,'img/chuzo-desgranado-pulled-pork.jpg','Pulled pork en salsa BBQ de lulo, batavia, queso cuajada, ripio de papa, maicitos, salsa de la casa.'),
+  // Hamburguesas
+  P('Hamburguesa Coraje','Hamburguesas',32900,41900,'img/hamburguesa-coraje.jpg','Pan brioche, 150g carne premium, queso philadelphia, mermelada de tomate, tocineta, aros de cebolla apanados, vegetales, salsa de la casa.'),
+  P('Hamburguesa Americana','Hamburguesas',28900,37900,'img/hamburguesa-americana.jpg','Pan brioche, 150g carne premium, queso americano, tocineta, vegetales, salsa BBQ, salsa de la casa.'),
+  P('Hamburguesa Mocca','Hamburguesas',33900,42900,'img/hamburguesa-mocca.jpg','Pan brioche, mayonesa de café, carne premium, queso americano, cebolla en reducción de café y ron, queso crema, tocineta.'),
+  P('Hamburguesa Hawai','Hamburguesas',33900,42900,'img/hamburguesa-hawai.jpg','Pan brioche, 150g carne premium, queso asado, piña calada, tocineta, vegetales, salsa BBQ, salsa de la casa.'),
+  P('Hamburguesa Gaucha','Hamburguesas',33900,42900,'img/hamburguesa-gaucha.jpg','Pan brioche, 150g carne premium, queso mozzarella, chorizo artesanal, guacamole, pico de gallo, vegetales, salsa de la casa.'),
+  P('Hamburguesa Marake','Hamburguesas',34900,43900,'img/hamburguesa-marake.jpg','Pan brioche, 150g carne premium, queso asado, dip cremoso de maracuyá, tocineta, vegetales, salsa de la casa.'),
+  // Papas
+  P('Papas Coraje','Papas',33900,null,'img/papas-coraje.jpg','Papas a la francesa (280g), salchicha ranchera, carne desmechada, queso mozzarella, maicitos, guacamole, pico de gallo, salsa de la casa.'),
+  // Perros
+  P('Perro Coraje','Perros',28900,37900,'img/perro-coraje.jpg','Pan brioche, salchicha, queso mozzarella, tocineta, carne desmechada, salsa de la casa.'),
+  P('Perro Clásico','Perros',25900,34900,'img/perro-clasico.jpg','Pan brioche, salchicha, queso americano, tocineta, salsa de tomate, salsa BBQ.'),
+  P('Perro Chancho','Perros',26900,35900,'img/perro-chancho.jpg','Pan brioche, salchicha, chicharrón crujiente, queso mozzarella, salsa BBQ, guacamole.'),
+  P('Perro Inmaduro','Perros',26900,35900,'img/perro-inmaduro.jpg','Pan brioche, salchicha, queso philadelphia, maduro calado, tocineta, salsa crema leña.'),
+  P('Perro Granjero','Perros',25900,34900,'img/perro-granjero.jpg','Pan brioche, salchicha, queso mozzarella, maicitos, tocineta, salsa de maíz dulce.'),
+  P('Perro Chingón','Perros',26900,35900,'img/perro-chingon.jpg','Pan brioche, salchicha, queso mozzarella, tocineta, pico de gallo, guacamole, salsa BBQ.'),
+  P('Perro Hawai','Perros',26900,35900,'img/perro-hawai.jpg','Pan brioche, salchicha, queso mozzarella, tocineta, piña calada, salsa BBQ.'),
+  P('Perro Perla del Otún','Perros',24900,33900,'img/perro-perla-del-otun.jpg','Pan brioche, salchicha americana, queso cuajada, huevos de codorniz, ripio de papa, tocineta, salsa mora, salsa rosada.'),
+  P('Perro Maradoniano','Perros',22900,31900,'img/perro-maradoniano.jpg','Pan brioche, chorizo artesanal, pico de gallo, guacamole, salsa de la casa.'),
+  // Bebidas (emoji)
+  P('Coca-Cola / Postobón','Bebidas',5900,null,'','Gaseosa 350ml bien fría.','🥤'),
+  P('Agua Manantial','Bebidas',5900,null,'','Agua natural 350ml.','💧'),
+  P('Tamarindo Michelada','Bebidas',7900,null,'','Michelada sabor tamarindo.','🍹'),
+  P('Soda Michelada','Bebidas',7900,null,'','Michelada con soda.','🍹'),
+  P('Sodas Saborizadas','Bebidas',12000,null,'','Sodas en diferentes sabores.','🥤'),
+  P('Hatsu','Bebidas',8500,null,'','Bebida Hatsu natural o de frutas.','🫖'),
+  P('Cerveza Sol','Bebidas',8500,null,'','Cerveza Sol 330ml.','🍺'),
+  P('Cerveza 3 Cordilleras','Bebidas',9000,null,'','Cerveza artesanal 3 Cordilleras.','🍺'),
+  P('Cerveza Corona','Bebidas',10000,null,'','Cerveza Corona 330ml.','🍺'),
+  // Adiciones (emoji)
+  P('Carne Premium','Adiciones',11000,null,'','Porción adicional de carne premium.','🥩'),
+  P('Queso Asado','Adiciones',4900,null,'','Porción de queso asado.','🧀'),
+  P('Queso Philadelphia','Adiciones',4900,null,'','Porción de queso philadelphia.','🧀'),
+  P('Queso Mozzarella','Adiciones',3900,null,'','Porción de queso mozzarella.','🧀'),
+  P('Queso Americano','Adiciones',3900,null,'','Porción de queso americano.','🧀'),
+  P('Porción Papas a la Francesa','Adiciones',7900,null,'','Porción de papas a la francesa.','🍟'),
+  P('Huevos de Codorniz','Adiciones',5000,null,'','Porción de huevos de codorniz.','🥚'),
+], 'coraje-menu-v1');
+
+// ── Productos (catálogo del menú) ──
+app.get('/productos', (req, res) => res.json(store.products()));
+
+app.post('/productos', requireRole('admin'), (req, res) => {
+  const { nombre, categoria, precio, disponible, imagen, descripcion, precioCombo, emoji } = req.body || {};
+  if (!nombre || !categoria) return res.status(400).json({ error: 'Nombre y categoría son obligatorios' });
+  const p = store.productAdd({
+    nombre: String(nombre).trim(),
+    categoria: String(categoria).trim(),
+    precio: Math.max(0, Number(precio) || 0),
+    precioCombo: precioCombo != null && precioCombo !== '' ? Math.max(0, Number(precioCombo) || 0) : null,
+    imagen: (imagen || '').trim(),
+    descripcion: (descripcion || '').trim(),
+    emoji: (emoji || '').trim(),
+    disponible: disponible !== false,
+  });
+  res.json({ success: true, product: p });
+});
+
+app.put('/productos/:id', requireRole('admin'), (req, res) => {
+  const p = store.productGet(parseInt(req.params.id));
+  if (!p) return res.status(404).json({ error: 'Producto no encontrado' });
+  const { nombre, categoria, precio, disponible, imagen, descripcion, precioCombo, emoji } = req.body || {};
+  if (nombre      !== undefined) p.nombre = String(nombre).trim();
+  if (categoria   !== undefined) p.categoria = String(categoria).trim();
+  if (precio      !== undefined) p.precio = Math.max(0, Number(precio) || 0);
+  if (precioCombo !== undefined) p.precioCombo = precioCombo === '' || precioCombo == null ? null : Math.max(0, Number(precioCombo) || 0);
+  if (imagen      !== undefined) p.imagen = String(imagen).trim();
+  if (descripcion !== undefined) p.descripcion = String(descripcion).trim();
+  if (emoji       !== undefined) p.emoji = String(emoji).trim();
+  if (disponible  !== undefined) p.disponible = !!disponible;
+  store.save();
+  res.json({ success: true, product: p });
+});
+
+app.delete('/productos/:id', requireRole('admin'), (req, res) => {
+  store.productDelete(parseInt(req.params.id));
+  res.json({ success: true });
+});
 
 // ── WebSocket ──
 wss.on('connection', (ws) => {
