@@ -350,6 +350,16 @@
         <div id="productosBox"></div>
       </section>
 
+      <!-- MESEROS -->
+      <section class="panel" id="p-meseros">
+        <div class="link-cards">
+          <a class="link-card" href="mesero.html" target="_blank">
+            <span class="ic-box" style="background:var(--red)"><svg class="i" viewBox="0 0 24 24"><path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg></span>
+            <div><b>Abrir Toma de Pedidos</b><span>Pantalla del mesero · se abre aparte (PIN propio)</span></div>
+          </a>
+        </div>
+      </section>
+
       <!-- COCINA (KDS) -->
       <section class="panel" id="p-cocina">
         <div class="link-cards">
@@ -410,6 +420,7 @@
       { id:'clientes', label:'Clientes', icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/>', panel:'clientes' },
       { id:'productos', label:'Productos', icon:'<path d="M3 8.5l9-5 9 5-9 5-9-5z"/><path d="M3 8.5v7l9 5 9-5v-7"/><path d="M12 13.5v7"/>', panel:'productos' },
       { id:'inventario', label:'Inventario', icon:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>', soon:true },
+      { id:'meseros', label:'Meseros', icon:'<path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/>', panel:'meseros' },
       { id:'cocina', label:'Cocina (KDS)', icon:'<path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/>', panel:'cocina' },
       { id:'creditos', label:'Créditos', icon:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>', soon:true },
       { id:'gastos', label:'Gastos', icon:'<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>', soon:true },
@@ -428,6 +439,12 @@
     const activos = {};    // pendientes
     const historial = {};  // completados
     let ws;
+
+    // Escapa texto de usuario antes de inyectarlo con innerHTML (seguro en texto y en atributos)
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
 
     // ── Acceso ──
     const AUTH_KEY='coraje_auth';
@@ -505,6 +522,8 @@
         else if(m.type==='new_order'){ activos[m.order.id]=m.order; refreshUI(); }
         else if(m.type==='order_complete'){ const o=activos[m.id]; if(o){ o.completedAt=m.completedAt; historial[m.id]=o; delete activos[m.id]; } refreshUI(); }
         else if(m.type==='order_invoiced'){ const o=historial[m.id]||activos[m.id]; if(o){ o.facturado=true; o.facturaNum=m.number; } refreshUI(); }
+        else if(m.type==='order_updated'){ const o=m.order; if(historial[o.id]) historial[o.id]=o; else activos[o.id]=o; refreshUI(); }
+        else if(m.type==='order_cancelled'){ delete activos[m.id]; delete historial[m.id]; refreshUI(); }
         else if(m.type==='history_cleared'){ for(const k in historial) delete historial[k]; refreshUI(); }
       };
       ws.onclose=()=>setTimeout(connect,3000);
@@ -635,7 +654,7 @@
           <span><i style="background:#2563eb"></i>Nuevos: <b>${nue}</b></span>
           <span><i style="background:#16a34a"></i>Recurrentes: <b>${rec}</b></span>
         </div>
-        <ul class="rank">${topCl.length?topCl.map((c,i)=>`<li><span class="n">${i+1}</span><span class="nm">${c.nombre||'—'}</span><span class="v">${fmtCOP(c.total)}</span></li>`).join(''):'<li style="color:var(--muted)">Aún sin clientes.</li>'}</ul>`;
+        <ul class="rank">${topCl.length?topCl.map((c,i)=>`<li><span class="n">${i+1}</span><span class="nm">${esc(c.nombre)||'—'}</span><span class="v">${fmtCOP(c.total)}</span></li>`).join(''):'<li style="color:var(--muted)">Aún sin clientes.</li>'}</ul>`;
 
       // Alertas "Qué hacer hoy"
       const demorados=Object.values(activos).filter(o=>(now-o.timestamp)>5*60000).length;
@@ -659,7 +678,7 @@
       const act=Object.values(activos).filter(match).sort((a,b)=>a.timestamp-b.timestamp);
       document.getElementById('activosCount').textContent=`(${act.length})`;
       document.querySelector('#activosTable tbody').innerHTML = act.length? act.map(o=>`
-        <tr><td>#${o.id}</td><td>${chipTipo(o)} ${ubicacion(o)}</td><td>${detalle(o)}</td>
+        <tr><td>#${o.id}</td><td>${chipTipo(o)} ${esc(ubicacion(o))}</td><td>${esc(detalle(o))}</td>
         <td class="money">${fmtCOP(total(o))}</td><td><span class="pill-state pend">En preparación</span></td>
         <td>${Math.floor((Date.now()-o.timestamp)/60000)} min</td></tr>`).join('')
         : `<tr class="empty-row"><td colspan="6">No hay pedidos activos en este momento.</td></tr>`;
@@ -667,7 +686,7 @@
       const hist=Object.values(historial).filter(match).sort((a,b)=>(b.completedAt||b.timestamp)-(a.completedAt||a.timestamp));
       document.getElementById('histCount').textContent=`(${hist.length})`;
       document.querySelector('#histTable tbody').innerHTML = hist.length? hist.map(o=>`
-        <tr><td>#${o.id}</td><td>${chipTipo(o)} ${ubicacion(o)}</td><td>${detalle(o)}</td>
+        <tr><td>#${o.id}</td><td>${chipTipo(o)} ${esc(ubicacion(o))}</td><td>${esc(detalle(o))}</td>
         <td class="money">${fmtCOP(total(o))}</td><td><span class="pill-state done">Entregado</span></td>
         <td>${clock(o.completedAt||o.timestamp)}</td>
         <td>${o.facturado?`<span class="pill-state inv">Factura ${o.facturaNum||''}</span>`:`<button class="row-btn" onclick="facturar(${o.id})">Facturar</button>`}</td></tr>`).join('')
@@ -709,7 +728,7 @@
         .sort((a,b)=>b.ultimo-a.ultimo);
       document.getElementById('clientesCount').textContent=`(${rows.length})`;
       document.querySelector('#clientesTable tbody').innerHTML = rows.length? rows.map(c=>`
-        <tr><td><b>${c.nombre||'—'}</b></td><td>${c.telefono||'—'}</td><td>${c.direccion||'—'}</td>
+        <tr><td><b>${esc(c.nombre)||'—'}</b></td><td>${esc(c.telefono)||'—'}</td><td>${esc(c.direccion)||'—'}</td>
         <td>${c.pedidos}</td><td class="money">${fmtCOP(c.total)}</td><td>${c.ultimo?clock(c.ultimo)+' · '+new Date(c.ultimo).toLocaleDateString('es-CO'):'—'}</td></tr>`).join('')
         : `<tr class="empty-row"><td colspan="6">Aún no hay clientes registrados. Se irán creando con los pedidos que traigan nombre o teléfono.</td></tr>`;
     }
@@ -725,24 +744,24 @@
     function renderProductos(){
       const q = (document.getElementById('searchProductos').value || '').toLowerCase();
       const cats = [...new Set(_productos.map(p => p.categoria))].sort();
-      document.getElementById('catList').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+      document.getElementById('catList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
       const list = _productos.filter(p => !q || p.nombre.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q));
       const box = document.getElementById('productosBox');
       if (!list.length){ box.innerHTML = `<div class="card"><div class="soon-box"><p>No hay productos. Crea el primero con “+ Nuevo producto”.</p></div></div>`; return; }
       const byCat = {};
       list.forEach(p => { (byCat[p.categoria] = byCat[p.categoria] || []).push(p); });
       box.innerHTML = Object.keys(byCat).sort().map(cat => `
-        <div class="section-title">${cat} <span class="count">(${byCat[cat].length})</span></div>
+        <div class="section-title">${esc(cat)} <span class="count">(${byCat[cat].length})</span></div>
         <div class="prod-grid">${byCat[cat].map(prodCard).join('')}</div>`).join('');
     }
     function prodCard(p){
       const img = p.imagen
-        ? `<img src="${p.imagen}" alt="${p.nombre}" class="prod-img" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'prod-img emoji',textContent:'${p.emoji||'🍔'}'}))" />`
-        : `<div class="prod-img emoji">${p.emoji||'🍔'}</div>`;
+        ? `<img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" class="prod-img" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'prod-img emoji',textContent:'${esc(p.emoji)||'🍔'}'}))" />`
+        : `<div class="prod-img emoji">${esc(p.emoji)||'🍔'}</div>`;
       const combo = p.precioCombo ? `<span class="prod-combo">Combo ${fmtCOP(p.precioCombo)}</span>` : '';
       return `<div class="prod-card ${p.disponible?'':'off'}">
         ${img}
-        <div class="prod-top"><b>${p.nombre}</b><span class="prod-price">${fmtCOP(p.precio)}</span></div>
+        <div class="prod-top"><b>${esc(p.nombre)}</b><span class="prod-price">${fmtCOP(p.precio)}</span></div>
         ${combo}
         <div class="prod-actions">
           <button class="mini ${p.disponible?'on':''}" onclick="toggleDisp(${p.id})">${p.disponible?'Disponible':'Agotado'}</button>

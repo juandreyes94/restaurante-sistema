@@ -612,6 +612,12 @@
     let ws;
     let reconnectTimer;
 
+    // Escapa texto de usuario antes de inyectarlo con innerHTML (seguro en texto y en atributos)
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
     // ── Íconos SVG de línea (estéticos y coherentes) ──
     const ICN = {
       clock:   '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -731,12 +737,25 @@
           addOrder(msg.order, true);
           applyFilterSort();
           playBell();
-          showToast(`${ICN.bell} Nuevo pedido${msg.order.mesa ? ' — Mesa ' + msg.order.mesa : ''}`);
+          showToast(`${ICN.bell} Nuevo pedido${msg.order.mesa ? ' — Mesa ' + esc(msg.order.mesa) : ''}`);
           updateCount();
         } else if (msg.type === 'order_complete') {
           archiveOrder(msg.id, msg.completedAt);
           removeOrder(msg.id);
           updateCount();
+        } else if (msg.type === 'order_updated') {
+          const o = msg.order;
+          const card = document.getElementById('order-' + o.id);
+          if (card) card.remove();
+          addOrder(o, false);
+          applyFilterSort();
+          playBell();
+          showToast(`${ICN.alert} Pedido #${o.id} modificado — revisa los cambios`);
+          updateCount();
+        } else if (msg.type === 'order_cancelled') {
+          removeOrder(msg.id);
+          updateCount();
+          showToast(`${ICN.alert} Pedido #${msg.id} cancelado`);
         } else if (msg.type === 'history_cleared') {
           for (const k in history) delete history[k];
           renderHistory();
@@ -791,7 +810,7 @@
         return `<div class="item-row" onclick="toggleItem(this)">
           <span class="item-check">${ICN.check}</span>
           <span class="item-qty">${i.qty}×</span>
-          <span class="item-name">${i.name}</span>
+          <span class="item-name">${esc(i.name)}</span>
           ${line > 0 ? `<span class="item-price">${fmtCOP(line)}</span>` : ''}
         </div>`;
       }).join('');
@@ -805,8 +824,8 @@
 
       const metaHTML = (order.nombre || order.notas) ? `
         <div class="card-meta">
-          ${order.nombre ? `<span>${ICN.user} <strong>${order.nombre}</strong></span>` : ''}
-          ${order.notas  ? `<span>${ICN.note} ${order.notas}</span>` : ''}
+          ${order.nombre ? `<span>${ICN.user} <strong>${esc(order.nombre)}</strong></span>` : ''}
+          ${order.notas  ? `<span>${ICN.note} ${esc(order.notas)}</span>` : ''}
         </div>` : '';
 
       const nItems = order.items.length;
@@ -816,13 +835,13 @@
       const chipHTML = `<div class="type-chip" style="background:${hexA(T.color,0.12)};color:${T.color}">
         <span class="ic">${T.icon}</span>${T.label}</div>`;
       const titleMain = tp === 'mesa'
-        ? `Mesa <b>${order.mesa}</b>`
-        : (order.nombre ? order.nombre : T.label);
+        ? `Mesa <b>${esc(order.mesa)}</b>`
+        : (order.nombre ? esc(order.nombre) : T.label);
       const locHTML = tp === 'domicilio' ? `
         <div class="card-loc">
           <span class="lbl">Entrega</span>
-          ${order.direccion ? `<span>${ICN.pin} <strong>${order.direccion}</strong></span>` : ''}
-          ${order.telefono  ? `<span>${ICN.phone} ${order.telefono}</span>` : ''}
+          ${order.direccion ? `<span>${ICN.pin} <strong>${esc(order.direccion)}</strong></span>` : ''}
+          ${order.telefono  ? `<span>${ICN.phone} ${esc(order.telefono)}</span>` : ''}
         </div>` : '';
 
       card.innerHTML = `
@@ -846,7 +865,7 @@
             <button class="invoice-btn" id="inv-btn-${order.id}" onclick="toggleInvoice(${order.id})">${ICN.receipt}</button>
           </div>
           <div class="invoice-form" id="inv-form-${order.id}">
-            <input type="text" id="inv-nit-${order.id}" placeholder="NIT/CC (vacío = consumidor final)" value="${order.nit || ''}" />
+            <input type="text" id="inv-nit-${order.id}" placeholder="NIT/CC (vacío = consumidor final)" value="${esc(order.nit || '')}" />
             <button class="invoice-submit" onclick="facturarOrder(${order.id})">Emitir</button>
           </div>
         </div>`;
@@ -940,7 +959,7 @@
       const div = document.createElement('div');
       div.id = 'noMatch';
       div.className = 'empty-state';
-      div.innerHTML = `<span class="icon">${ICN.search}</span><p>Sin coincidencias</p><p style="font-size:0.82rem">Nada coincide con “${filterMesa}”</p>`;
+      div.innerHTML = `<span class="icon">${ICN.search}</span><p>Sin coincidencias</p><p style="font-size:0.82rem">Nada coincide con “${esc(filterMesa)}”</p>`;
       grid.appendChild(div);
     }
     function removeNoMatch() { const n = document.getElementById('noMatch'); if (n) n.remove(); }
@@ -1011,18 +1030,18 @@
 
       body.innerHTML = list.map(o => {
         const lines = (o.items || []).map(i =>
-          `<div class="hist-line"><span class="q">${i.qty}×</span><span>${i.name}</span></div>`
+          `<div class="hist-line"><span class="q">${i.qty}×</span><span>${esc(i.name)}</span></div>`
         ).join('');
         const total = orderTotal(o);
         const totalHTML = total > 0 ? `<div class="hist-total"><span>Total</span><b>${fmtCOP(total)}</b></div>` : '';
         const tp = tipoDe(o);
         const T = TIPOS[tp];
-        const histTitle = tp === 'mesa' ? `Mesa ${o.mesa}` : (o.nombre || T.label);
+        const histTitle = tp === 'mesa' ? `Mesa ${esc(o.mesa)}` : (esc(o.nombre) || T.label);
         const cliente = (tp !== 'mesa' && o.nombre) ? '' :
-          (o.nombre ? `<div class="hist-line" style="color:var(--ink-soft)">${ICN.user} ${o.nombre}</div>` : '');
+          (o.nombre ? `<div class="hist-line" style="color:var(--ink-soft)">${ICN.user} ${esc(o.nombre)}</div>` : '');
         const dirLine = (tp === 'domicilio' && o.direccion)
-          ? `<div class="hist-line" style="color:var(--ink-soft)">${ICN.pin} ${o.direccion}${o.telefono ? ' · ' + o.telefono : ''}</div>` : '';
-        const invBadge = o.facturado ? `<span class="hist-badge inv">${ICN.receipt} Facturado${o.facturaNum ? ' ' + o.facturaNum : ''}</span>` : '';
+          ? `<div class="hist-line" style="color:var(--ink-soft)">${ICN.pin} ${esc(o.direccion)}${o.telefono ? ' · ' + esc(o.telefono) : ''}</div>` : '';
+        const invBadge = o.facturado ? `<span class="hist-badge inv">${ICN.receipt} Facturado${o.facturaNum ? ' ' + esc(o.facturaNum) : ''}</span>` : '';
         return `
           <div class="hist-card">
             <div class="hist-head">

@@ -65,6 +65,7 @@ module.exports = {
     _data.orders = _data.orders.filter(o => o.status === 'pendiente');
     save();
   },
+  remove: (id) => { _data.orders = _data.orders.filter(o => o.id !== id); save(); },
 
   // ── Productos (catálogo del menú) ──
   products:      () => _data.products,

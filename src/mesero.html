@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#FB3E2C" />
+  <title>Toma de pedidos — Coraje</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red:#FB3E2C; --red-dark:#d62b1a; --green:#16a34a; --green-dark:#15803d;
+      --amber:#f59e0b; --blue:#2563eb; --teal:#0d9488; --orange:#f97316; --orange-bright:#ff7a2f;
+      --bg:#fbeee7; --surface:#ffffff; --surface-2:#fbf4ef;
+      --ink:#1f2430; --ink-soft:#6b7280; --border:#e4e7ec; --muted:#9aa1ac;
+      --shadow:0 6px 20px rgba(23,29,41,0.08); --shadow-lg:0 14px 40px rgba(23,29,41,0.14);
+    }
+    html { font-size:16px; }
+    @media (min-width:1500px){ html{ font-size:18px; } }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+    .bebas { font-family:'Bebas Neue',sans-serif; }
+    .i { width:1.15em; height:1.15em; display:inline-block; vertical-align:-0.2em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+    /* ── HEADER ── */
+    header {
+      background:linear-gradient(120deg,var(--red),var(--orange-bright)); color:#fff;
+      padding:0.8rem 1.2rem; display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:30; box-shadow:0 6px 22px rgba(214,43,26,0.28);
+    }
+    .header-right { display:flex; align-items:center; gap:0.6rem; }
+    .active-btn { display:flex; align-items:center; gap:0.45rem; background:rgba(255,255,255,0.16); color:#fff; border:none; border-radius:10px; padding:0.45rem 0.8rem; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.82rem; cursor:pointer; transition:background 0.15s; }
+    .active-btn:hover { background:rgba(255,255,255,0.28); }
+    .active-btn .badge { background:#fff; color:var(--red); font-family:'Bebas Neue',sans-serif; font-size:0.9rem; min-width:20px; height:20px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 6px; }
+    .header-left { display:flex; align-items:center; gap:0.75rem; }
+    .brand-logo { height:1.9rem; width:auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.2)); }
+    .logo-tag { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:0.14em; text-transform:uppercase; padding-left:0.85rem; border-left:2px solid rgba(255,255,255,0.35); }
+    .logout-btn { background:rgba(0,0,0,0.16); color:#fff; border:none; border-radius:8px; font-size:0.72rem; font-weight:600; padding:0.35rem 0.7rem; cursor:pointer; }
+    .logout-btn:hover { background:rgba(0,0,0,0.3); }
+
+    /* ── LAYOUT ── */
+    .app { display:none; }
+    .layout { display:grid; grid-template-columns:1fr 360px; gap:0; min-height:calc(100vh - 3.6rem); }
+    @media (max-width:900px){ .layout { grid-template-columns:1fr; } }
+
+    /* ── Panel de productos ── */
+    .products { padding:1rem 1.2rem 6rem; min-width:0; }
+    .search-bar { display:flex; align-items:center; gap:0.55rem; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0.65rem 0.9rem; box-shadow:var(--shadow); margin-bottom:0.2rem; }
+    .search-bar input { flex:1; border:none; outline:none; background:none; font-size:0.92rem; color:var(--ink); font-family:inherit; }
+    .search-bar .clr { background:none; border:none; color:var(--muted); font-size:1.3rem; line-height:1; cursor:pointer; display:none; }
+    .cat-scroll { display:flex; gap:0.45rem; overflow-x:auto; padding:0.6rem 0 0.9rem; position:sticky; top:3.6rem; background:var(--bg); z-index:15; }
+    .cat-scroll::-webkit-scrollbar { display:none; }
+    .cat-pill { flex-shrink:0; padding:0.45rem 1rem; border-radius:999px; font-size:0.8rem; font-weight:700; letter-spacing:0.03em; border:1.5px solid var(--border); background:var(--surface); color:var(--ink-soft); cursor:pointer; transition:all 0.15s; }
+    .cat-pill.active { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+
+    .cat-group-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.04em; margin:1rem 0 0.7rem; color:var(--ink); }
+    .p-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.8rem; }
+
+    .p-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column; }
+    .p-thumb { width:100%; height:120px; object-fit:cover; background:var(--surface-2); }
+    .p-thumb.emoji { display:flex; align-items:center; justify-content:center; font-size:3rem; background:radial-gradient(circle at 50% 28%, rgba(255,255,255,0.4), transparent 62%), linear-gradient(135deg, var(--red), var(--orange)); }
+    .p-body { padding:0.6rem 0.7rem 0.7rem; display:flex; flex-direction:column; gap:0.5rem; flex:1; }
+    .p-name { font-size:0.85rem; font-weight:700; line-height:1.2; }
+    .p-in-cart { font-size:0.68rem; font-weight:700; color:var(--green-dark); background:rgba(22,163,74,0.12); padding:0.1rem 0.45rem; border-radius:999px; width:fit-content; }
+    .p-btns { display:flex; gap:0.4rem; margin-top:auto; flex-wrap:wrap; }
+    .add-btn { flex:1; min-width:0; padding:0.5rem 0.4rem; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.78rem; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:0.05rem; transition:transform 0.1s; white-space:nowrap; }
+    .add-btn:active { transform:scale(0.94); }
+    .add-btn .lbl { font-size:0.56rem; letter-spacing:0.08em; text-transform:uppercase; opacity:0.8; }
+    .add-btn.solo { background:var(--surface-2); color:var(--ink); border:1px solid var(--border); }
+    .add-btn.solo:hover { border-color:var(--red); }
+    .add-btn.combo { background:var(--red); color:#fff; }
+    .add-btn.combo:hover { background:var(--red-dark); }
+    .add-btn.single { background:var(--red); color:#fff; }
+    .add-btn.single:hover { background:var(--red-dark); }
+
+    /* ── Panel del carrito ── */
+    .cart { background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:3.6rem; height:calc(100vh - 3.6rem); }
+    .cart-head { padding:1rem 1.1rem 0.8rem; border-bottom:1px solid var(--border); }
+    .cart-head h2 { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.04em; display:flex; align-items:center; gap:0.5rem; }
+
+    /* Tipo de pedido */
+    .type-tabs { display:flex; gap:0.35rem; margin-top:0.8rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
+    .type-tab { flex:1; padding:0.5rem 0.3rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.76rem; color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:0.15rem; transition:all 0.15s; }
+    .type-tab .ic { font-size:1.1rem; }
+    .type-tab.active { background:#fff; color:var(--red); box-shadow:var(--shadow); }
+    .type-fields { display:flex; flex-direction:column; gap:0.5rem; margin-top:0.7rem; }
+    .type-fields input { width:100%; padding:0.6rem 0.7rem; border:1px solid var(--border); border-radius:10px; font-size:0.88rem; font-family:inherit; color:var(--ink); background:var(--surface-2); outline:none; }
+    .type-fields input:focus { border-color:var(--red); }
+    .field-hide { display:none; }
+
+    .cart-body { flex:1; overflow-y:auto; padding:0.8rem 1.1rem; }
+    .cart-empty { text-align:center; color:var(--muted); padding:2.5rem 1rem; font-size:0.9rem; }
+    .cart-empty .i { width:2.6rem; height:2.6rem; color:var(--border); margin-bottom:0.6rem; }
+    .cart-line { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0; border-bottom:1px solid var(--border); }
+    .cart-line:last-child { border-bottom:none; }
+    .cl-info { flex:1; min-width:0; }
+    .cl-name { font-size:0.84rem; font-weight:600; line-height:1.2; }
+    .cl-price { font-size:0.74rem; color:var(--ink-soft); }
+    .qty-ctl { display:flex; align-items:center; gap:0.4rem; }
+    .qty-btn { width:26px; height:26px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--ink); font-size:1.1rem; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .qty-btn:hover { border-color:var(--red); color:var(--red); }
+    .qty-num { font-family:'Bebas Neue',sans-serif; font-size:1.15rem; min-width:20px; text-align:center; }
+
+    .cart-foot { border-top:1px solid var(--border); padding:0.9rem 1.1rem 1.1rem; background:var(--surface); }
+    .cart-total { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.8rem; }
+    .cart-total .lbl { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.04em; color:var(--ink-soft); }
+    .cart-total .val { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; color:var(--red); }
+    .send-btn { width:100%; padding:0.9rem; background:var(--green); color:#fff; border:none; border-radius:14px; font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.08em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; box-shadow:0 4px 14px rgba(22,163,74,0.32); transition:background 0.2s,transform 0.1s; }
+    .send-btn:hover:not(:disabled) { background:var(--green-dark); transform:translateY(-1px); }
+    .send-btn:disabled { background:var(--muted); box-shadow:none; cursor:not-allowed; }
+
+    /* ── Barra flotante (móvil) ── */
+    .cart-fab { display:none; position:fixed; left:1rem; right:1rem; bottom:1rem; z-index:40; background:var(--ink); color:#fff; border:none; border-radius:16px; padding:0.9rem 1.2rem; align-items:center; justify-content:space-between; box-shadow:var(--shadow-lg); cursor:pointer; }
+    .cart-fab .count { background:var(--red); font-family:'Bebas Neue',sans-serif; font-size:1.1rem; min-width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 8px; }
+    .cart-fab .fab-total { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; }
+    .cart-fab .fab-label { font-weight:700; letter-spacing:0.03em; }
+
+    @media (max-width:900px){
+      .cart { position:fixed; inset:0; top:auto; height:88vh; border-left:none; border-radius:22px 22px 0 0; box-shadow:var(--shadow-lg); transform:translateY(100%); transition:transform 0.3s cubic-bezier(.4,0,.2,1); z-index:50; }
+      .cart.open { transform:translateY(0); }
+      .cart-fab { display:flex; }
+      .cart-fab.hidden { display:none; }
+      .cart-drag { width:44px; height:5px; background:var(--border); border-radius:999px; margin:0.6rem auto 0; }
+    }
+    @media (min-width:901px){ .cart-drag { display:none; } }
+
+    /* ── Cajón de pedidos activos (corregir) ── */
+    .drawer-bg { position:fixed; inset:0; z-index:60; background:rgba(23,29,41,0.45); opacity:0; pointer-events:none; transition:opacity 0.25s; }
+    .drawer-bg.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; z-index:70; width:min(440px,94vw); height:100%; background:var(--bg); box-shadow:-12px 0 40px rgba(23,29,41,0.28); transform:translateX(100%); transition:transform 0.3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
+    .drawer.open { transform:translateX(0); }
+    .drawer-head { background:linear-gradient(120deg,var(--red),var(--orange-bright)); color:#fff; padding:1.1rem 1.2rem; display:flex; align-items:center; justify-content:space-between; }
+    .drawer-head h2 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.04em; }
+    .drawer-close { background:rgba(0,0,0,0.16); color:#fff; border:none; width:36px; height:36px; border-radius:10px; cursor:pointer; font-size:1.3rem; line-height:1; }
+    .drawer-body { flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.8rem; }
+    .drawer-empty { color:var(--muted); text-align:center; margin-top:3rem; font-size:0.9rem; }
+    .ao-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+    .ao-head { display:flex; align-items:center; justify-content:space-between; padding:0.7rem 0.9rem; border-bottom:1px solid var(--border); }
+    .ao-title { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.03em; }
+    .ao-id { font-size:0.72rem; color:var(--ink-soft); }
+    .ao-body { padding:0.55rem 0.9rem 0.7rem; }
+    .ao-line { font-size:0.82rem; color:var(--ink); padding:0.08rem 0; }
+    .ao-line .q { color:var(--red); font-weight:700; }
+    .ao-total { display:flex; justify-content:space-between; align-items:baseline; margin-top:0.4rem; padding-top:0.4rem; border-top:1px dashed var(--border); font-size:0.8rem; color:var(--ink-soft); }
+    .ao-total b { font-family:'Bebas Neue',sans-serif; font-size:1.15rem; color:var(--red); }
+    .ao-actions { display:flex; gap:0.5rem; padding:0 0.9rem 0.85rem; }
+    .ao-btn { flex:1; padding:0.55rem; border-radius:10px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.82rem; cursor:pointer; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); }
+    .ao-btn.edit { border-color:var(--orange); color:#c2410c; }
+    .ao-btn.edit:hover { background:rgba(249,115,22,0.12); }
+    .ao-btn.cancel { border-color:var(--red); color:var(--red); }
+    .ao-btn.cancel:hover { background:rgba(251,62,44,0.1); }
+
+    /* ── Banner modo edición ── */
+    .edit-banner { display:none; align-items:center; gap:0.5rem; background:rgba(249,115,22,0.14); color:#c2410c; border:1px solid rgba(249,115,22,0.35); border-radius:10px; padding:0.5rem 0.7rem; margin-bottom:0.7rem; font-size:0.82rem; font-weight:700; }
+    .edit-banner.on { display:flex; }
+    .edit-banner .x { margin-left:auto; background:none; border:none; color:#c2410c; font-weight:700; cursor:pointer; font-size:0.76rem; text-decoration:underline; }
+
+    /* ── Login PIN ── */
+    .login-overlay { position:fixed; inset:0; z-index:200; background:linear-gradient(140deg,var(--red),var(--red-dark)); display:none; align-items:center; justify-content:center; padding:1.5rem; }
+    .login-card { background:var(--surface); border-radius:20px; box-shadow:var(--shadow-lg); width:100%; max-width:360px; padding:2rem 1.75rem; text-align:center; }
+    .login-card img { height:2.4rem; margin-bottom:0.6rem; }
+    .login-card h1 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.06em; }
+    .login-card p { color:var(--ink-soft); font-size:0.85rem; margin-top:0.2rem; }
+    .role-tabs { display:flex; gap:0.4rem; margin-top:1.1rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
+    .role-tab { flex:1; padding:0.55rem 0.3rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.8rem; color:var(--ink-soft); display:flex; align-items:center; justify-content:center; gap:0.35rem; transition:all 0.15s; }
+    .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+    .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; }
+    .pin-input:focus { border-color:var(--red); }
+    .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+    .login-btn { width:100%; margin-top:1rem; padding:0.85rem; background:var(--red); color:#fff; border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.08em; cursor:pointer; }
+    .login-btn:hover { background:var(--red-dark); }
+    .login-err { color:var(--red); font-size:0.82rem; margin-top:0.7rem; min-height:1.1rem; font-weight:600; }
+
+    /* ── Aviso "Listos para entregar" (fijo, no estorba el scroll) ── */
+    .ready-tray { position:fixed; left:1rem; bottom:1rem; z-index:45; width:min(340px, calc(100vw - 2rem)); display:none; flex-direction:column; gap:0.5rem; max-height:64vh; overflow-y:auto; }
+    .ready-tray.show { display:flex; }
+    .ready-title { font-family:'Bebas Neue',sans-serif; font-size:1.05rem; letter-spacing:0.04em; color:#fff; background:var(--green-dark); padding:0.4rem 0.75rem; border-radius:10px; box-shadow:var(--shadow); align-self:flex-start; }
+    .ready-card { background:#fff; border:1px solid rgba(22,163,74,0.4); border-left:5px solid var(--green); border-radius:12px; box-shadow:var(--shadow-lg); padding:0.6rem 0.75rem; display:flex; align-items:center; gap:0.6rem; animation:readyPulse 1.3s ease-in-out 3; }
+    @keyframes readyPulse { 0%,100%{ box-shadow:var(--shadow); } 50%{ box-shadow:0 0 0 3px rgba(22,163,74,0.45), var(--shadow-lg); } }
+    .rc-main { flex:1; min-width:0; }
+    .rc-dest { font-weight:800; font-size:0.92rem; color:var(--ink); }
+    .rc-items { font-size:0.76rem; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rc-sub { font-size:0.72rem; color:var(--muted); margin-top:0.1rem; }
+    .rc-btn { flex:0 0 auto; background:var(--green); color:#fff; border:none; border-radius:10px; padding:0.55rem 0.75rem; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.78rem; cursor:pointer; white-space:nowrap; }
+    .rc-btn:hover { background:var(--green-dark); }
+    @media (max-width:900px){ .ready-tray { bottom:5.4rem; } }  /* encima del botón flotante del carrito */
+
+    /* ── Toast ── */
+    .toast { position:fixed; top:4.5rem; left:50%; transform:translateX(-50%); z-index:99; background:var(--ink); color:#fff; padding:0.85rem 1.3rem; border-radius:12px; font-weight:600; font-size:0.92rem; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:0.5rem; animation:toastIn 0.3s ease both; max-width:90vw; }
+    .toast.ok { background:var(--green-dark); }
+    .toast.bad { background:var(--red-dark); }
+    @keyframes toastIn { from{opacity:0;transform:translate(-50%,-12px)} to{opacity:1;transform:translate(-50%,0)} }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN PIN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <img src="logo.png" alt="Coraje" />
+      <h1>Ingreso</h1>
+      <p>Elige tu acceso e ingresa el código</p>
+      <div class="role-tabs">
+        <button class="role-tab" data-role="cocina" onclick="pickRole('cocina')">
+          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
+        <button class="role-tab active" data-role="mesero" onclick="pickRole('mesero')">
+          <svg class="i" viewBox="0 0 24 24"><path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg> Mesero</button>
+        <button class="role-tab" data-role="admin" onclick="pickRole('admin')">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
+      </div>
+      <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
+      <button class="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="app" id="app">
+    <header>
+      <div class="header-left">
+        <img src="logo.png" alt="Coraje" class="brand-logo" />
+        <span class="logo-tag">Toma de pedidos</span>
+      </div>
+      <div class="header-right">
+        <button class="active-btn" onclick="openActive()">
+          <svg class="i" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 14h4"/></svg>
+          Pedidos activos <span class="badge" id="activeBadge">0</span>
+        </button>
+        <button class="logout-btn" onclick="logout()">Salir</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- PRODUCTOS -->
+      <section class="products">
+        <div class="search-bar">
+          <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="searchProd" placeholder="Buscar producto o categoría..." oninput="onSearch(this.value)" />
+          <button class="clr" id="searchClr" onclick="clearSearch()">×</button>
+        </div>
+        <div class="cat-scroll" id="catScroll"></div>
+        <div id="productsBox"></div>
+      </section>
+
+      <!-- CARRITO -->
+      <aside class="cart" id="cart">
+        <div class="cart-drag"></div>
+        <div class="cart-head">
+          <h2><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.6 13a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg> <span id="cartTitle">Pedido</span></h2>
+          <div class="edit-banner" id="editBanner">
+            <svg class="i" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            <span id="editBannerText">Editando pedido</span>
+            <button class="x" onclick="exitEdit()">Descartar</button>
+          </div>
+          <div class="type-tabs">
+            <button class="type-tab active" data-tipo="mesa" onclick="setTipo('mesa')"><span class="ic">🍽️</span>Mesa</button>
+            <button class="type-tab" data-tipo="domicilio" onclick="setTipo('domicilio')"><span class="ic">🛵</span>Domicilio</button>
+            <button class="type-tab" data-tipo="llevar" onclick="setTipo('llevar')"><span class="ic">🥡</span>Llevar</button>
+          </div>
+          <div class="type-fields">
+            <input type="text" id="fMesa" inputmode="numeric" placeholder="Número de mesa" />
+            <input type="text" id="fDireccion" class="field-hide" placeholder="Dirección de entrega" />
+            <input type="text" id="fTelefono" class="field-hide" inputmode="tel" placeholder="Teléfono" />
+            <input type="text" id="fNombre" placeholder="Nombre del cliente (opcional)" />
+            <input type="text" id="fNotas" placeholder="Notas (ej. sin cebolla)" />
+          </div>
+        </div>
+        <div class="cart-body" id="cartBody"></div>
+        <div class="cart-foot">
+          <div class="cart-total"><span class="lbl">Total</span><span class="val" id="cartTotal">$0</span></div>
+          <button class="send-btn" id="sendBtn" onclick="sendOrder()" disabled>
+            <svg class="i" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+            Enviar a cocina
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Aviso de pedidos listos para recoger/entregar -->
+    <div class="ready-tray" id="readyTray"></div>
+
+    <!-- Barra flotante móvil -->
+    <button class="cart-fab hidden" id="cartFab" onclick="toggleCart(true)">
+      <span class="count" id="fabCount">0</span>
+      <span class="fab-label">Ver pedido</span>
+      <span class="fab-total" id="fabTotal">$0</span>
+    </button>
+  </div>
+
+  <!-- CAJÓN DE PEDIDOS ACTIVOS (corregir cualquier pedido) -->
+  <div class="drawer-bg" id="drawerBg" onclick="closeActive()"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <h2>Pedidos activos</h2>
+      <button class="drawer-close" onclick="closeActive()">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody">
+      <div class="drawer-empty">Cargando…</div>
+    </div>
+  </aside>
+
+  <div id="toastBox"></div>
+
+  <script>
+    // Escapa texto de usuario/catálogo antes de inyectarlo con innerHTML
+    function esc(v){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function fmtCOP(n){ return '$' + Number(n||0).toLocaleString('es-CO'); }
+
+    // ── Acceso por PIN ──
+    const AUTH_KEY = 'coraje_auth';
+    function getAuth(){ try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } }
+    function authHeaders(){ const a = getAuth(); return a?.token ? { 'x-auth-token': a.token } : {}; }
+    const PAGE_ROLE = 'mesero';
+    let selRole = 'mesero';
+    function pickRole(r){
+      selRole = r;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
+      document.getElementById('pinInput').focus();
+    }
+    let _started = false;
+    function startApp(){
+      if (_started) return; _started = true;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      loadProductos();
+      connectWS();
+    }
+    function routeTo(role){
+      if (role === PAGE_ROLE) startApp();
+      else location.href = role === 'admin' ? 'admin.html' : 'comanda.html';
+    }
+    function boot(){
+      const a = getAuth();
+      if (a && a.token && a.role === 'mesero') startApp();
+      else { document.getElementById('loginOverlay').style.display = 'flex'; setTimeout(() => document.getElementById('pinInput').focus(), 100); }
+    }
+    async function doLogin(){
+      const input = document.getElementById('pinInput'), err = document.getElementById('loginErr');
+      err.textContent = '';
+      try {
+        const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ pin: input.value.trim() }) });
+        const data = await res.json();
+        if (!data.ok) throw new Error('Código incorrecto');
+        const nombres = { admin:'Administrador', cocina:'Cocina', mesero:'Mesero' };
+        if (data.role !== selRole) throw new Error(`Ese código no es de ${nombres[selRole] || selRole}`);
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
+        routeTo(data.role);
+      } catch (e) {
+        input.classList.add('err'); err.textContent = e.message || 'Código incorrecto';
+        input.value = ''; input.focus(); setTimeout(() => input.classList.remove('err'), 400);
+      }
+    }
+    function logout(){ localStorage.removeItem(AUTH_KEY); location.reload(); }
+
+    // ── Estado ──
+    let PRODUCTS = [];         // catálogo disponible
+    let activeCat = 'Todos';
+    let tipo = 'mesa';
+    const cart = {};           // key -> { name, price, qty }
+
+    // ── Catálogo (fuente única: /productos, igual que el menú y el admin) ──
+    async function loadProductos(){
+      try {
+        const r = await fetch('/productos', { headers: authHeaders() });
+        const prods = await r.json();
+        PRODUCTS = (Array.isArray(prods) ? prods : []).filter(p => p.disponible !== false);
+      } catch { PRODUCTS = []; }
+      renderCats();
+      renderProducts();
+    }
+    function categorias(){ return [...new Set(PRODUCTS.map(p => p.categoria))]; }
+    function renderCats(){
+      const cats = ['Todos', ...categorias()];
+      document.getElementById('catScroll').innerHTML = cats.map(c =>
+        `<button class="cat-pill ${c === activeCat ? 'active' : ''}" onclick="setCat('${esc(c).replace(/'/g,"\\'")}')">${esc(c)}</button>`
+      ).join('');
+    }
+    function setCat(c){ activeCat = c; renderCats(); renderProducts(); }
+
+    // ── Búsqueda (inspirada en el POS de referencia) ──
+    let query = '';
+    function onSearch(v){
+      query = v.trim().toLowerCase();
+      document.getElementById('searchClr').style.display = v ? '' : 'none';
+      renderProducts();
+    }
+    function clearSearch(){ document.getElementById('searchProd').value = ''; onSearch(''); }
+
+    function renderProducts(){
+      const box = document.getElementById('productsBox');
+      if (!PRODUCTS.length){ box.innerHTML = `<div class="cart-empty">No hay productos disponibles en el catálogo.</div>`; return; }
+      // Con búsqueda activa: resultados planos ignorando la categoría
+      if (query){
+        const hits = PRODUCTS.filter(p => (p.nombre + ' ' + p.categoria).toLowerCase().includes(query));
+        box.innerHTML = hits.length
+          ? `<div class="cat-group-title">Resultados (${hits.length})</div><div class="p-grid">${hits.map(prodCard).join('')}</div>`
+          : `<div class="cart-empty">Nada coincide con “${esc(query)}”.</div>`;
+        return;
+      }
+      const cats = activeCat === 'Todos' ? categorias() : [activeCat];
+      box.innerHTML = cats.map(cat => {
+        const items = PRODUCTS.filter(p => p.categoria === cat);
+        if (!items.length) return '';
+        return `<div class="cat-group-title">${esc(cat)}</div><div class="p-grid">${items.map(prodCard).join('')}</div>`;
+      }).join('');
+    }
+    function prodCard(p){
+      const thumb = p.imagen
+        ? `<img src="${esc(p.imagen)}" alt="${esc(p.nombre)}" class="p-thumb" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'p-thumb emoji',textContent:'${esc(p.emoji)||'🍔'}'}))" />`
+        : `<div class="p-thumb emoji">${esc(p.emoji)||'🍔'}</div>`;
+      const inCart = Object.values(cart).filter(c => c.baseId === p.id).reduce((s,c) => s + c.qty, 0);
+      const btns = p.precioCombo
+        ? `<button class="add-btn solo" onclick="add(${p.id},'${jsStr(p.nombre)}',${p.precio},false)"><span class="lbl">Solo</span>${fmtCOP(p.precio)}</button>
+           <button class="add-btn combo" onclick="add(${p.id},'${jsStr(p.nombre)}',${p.precioCombo},true)"><span class="lbl">Combo</span>${fmtCOP(p.precioCombo)}</button>`
+        : `<button class="add-btn single" onclick="add(${p.id},'${jsStr(p.nombre)}',${p.precio},false)">${fmtCOP(p.precio)}</button>`;
+      return `<div class="p-card">
+        ${thumb}
+        <div class="p-body">
+          <div class="p-name">${esc(p.nombre)}</div>
+          ${inCart ? `<span class="p-in-cart">${inCart} en el pedido</span>` : ''}
+          <div class="p-btns">${btns}</div>
+        </div></div>`;
+    }
+    // Prepara un string seguro para incrustar dentro de un atributo onclick='...'
+    function jsStr(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+    // ── Carrito ──
+    function add(baseId, nombre, price, isCombo){
+      const name = isCombo ? `${nombre} (Combo)` : nombre;
+      const key = name;
+      if (cart[key]) cart[key].qty++;
+      else cart[key] = { baseId, name, price, qty: 1 };
+      renderCart();
+      renderProducts();   // refresca el contador "N en el pedido"
+    }
+    function changeQty(key, delta){
+      if (!cart[key]) return;
+      cart[key].qty += delta;
+      if (cart[key].qty <= 0) delete cart[key];
+      renderCart();
+      renderProducts();
+    }
+    function cartTotal(){ return Object.values(cart).reduce((s,c) => s + c.price * c.qty, 0); }
+    function cartCount(){ return Object.values(cart).reduce((s,c) => s + c.qty, 0); }
+
+    function renderCart(){
+      const body = document.getElementById('cartBody');
+      const lines = Object.entries(cart);
+      if (!lines.length){
+        body.innerHTML = `<div class="cart-empty"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.6 13a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><br>Toca un producto para agregarlo al pedido.</div>`;
+      } else {
+        body.innerHTML = lines.map(([key, c]) => `
+          <div class="cart-line">
+            <div class="cl-info">
+              <div class="cl-name">${esc(c.name)}</div>
+              <div class="cl-price">${fmtCOP(c.price)} c/u · ${fmtCOP(c.price * c.qty)}</div>
+            </div>
+            <div class="qty-ctl">
+              <button class="qty-btn" onclick="changeQty('${jsStr(key)}',-1)">−</button>
+              <span class="qty-num">${c.qty}</span>
+              <button class="qty-btn" onclick="changeQty('${jsStr(key)}',1)">+</button>
+            </div>
+          </div>`).join('');
+      }
+      const total = cartTotal(), count = cartCount();
+      document.getElementById('cartTotal').textContent = fmtCOP(total);
+      document.getElementById('sendBtn').disabled = count === 0;
+      // Barra flotante (móvil)
+      document.getElementById('fabCount').textContent = count;
+      document.getElementById('fabTotal').textContent = fmtCOP(total);
+      document.getElementById('cartFab').classList.toggle('hidden', count === 0);
+    }
+
+    // ── Tipo de pedido ──
+    function setTipo(t){
+      tipo = t;
+      document.querySelectorAll('.type-tab').forEach(b => b.classList.toggle('active', b.dataset.tipo === t));
+      const mesa = document.getElementById('fMesa');
+      const dir = document.getElementById('fDireccion'), tel = document.getElementById('fTelefono');
+      mesa.classList.toggle('field-hide', t !== 'mesa');
+      dir.classList.toggle('field-hide', t !== 'domicilio');
+      tel.classList.toggle('field-hide', t !== 'domicilio');
+    }
+
+    // ── Carrito móvil (sheet) ──
+    function toggleCart(open){ document.getElementById('cart').classList.toggle('open', open); }
+
+    // ── Enviar ──
+    async function sendOrder(){
+      const count = cartCount();
+      if (!count) return;
+      const mesa = document.getElementById('fMesa').value.trim();
+      const direccion = document.getElementById('fDireccion').value.trim();
+      const telefono = document.getElementById('fTelefono').value.trim();
+      const nombre = document.getElementById('fNombre').value.trim();
+      const notas = document.getElementById('fNotas').value.trim();
+
+      if (tipo === 'mesa' && !mesa){ toast('Indica el número de mesa', 'bad'); document.getElementById('fMesa').focus(); return; }
+      if (tipo === 'domicilio' && !direccion){ toast('Indica la dirección de entrega', 'bad'); document.getElementById('fDireccion').focus(); return; }
+
+      const items = Object.values(cart).map(c => ({ name: c.name, price: c.price, qty: c.qty }));
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true; const prev = btn.innerHTML; btn.innerHTML = 'Guardando…';
+      try {
+        const res = await fetch(editingId ? `/pedido/${editingId}` : '/pedido', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ tipo, mesa, direccion, telefono, nombre, notas, items }),
+        });
+        const data = await res.json();
+        if (data.success){
+          toast(editingId ? `✅ Pedido #${editingId} corregido` : `✅ Pedido #${data.id} enviado a cocina`, 'ok');
+          exitEdit();
+          toggleCart(false);
+        } else {
+          toast(data.error || 'No se pudo guardar', 'bad');
+          btn.disabled = false; btn.innerHTML = prev;
+        }
+      } catch {
+        toast('Error de conexión con el servidor', 'bad');
+        btn.disabled = false; btn.innerHTML = prev;
+      }
+    }
+    function resetOrder(){
+      for (const k in cart) delete cart[k];
+      document.getElementById('fMesa').value = '';
+      document.getElementById('fDireccion').value = '';
+      document.getElementById('fTelefono').value = '';
+      document.getElementById('fNombre').value = '';
+      document.getElementById('fNotas').value = '';
+      const btn = document.getElementById('sendBtn');
+      btn.innerHTML = `<svg class="i" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg> Enviar a cocina`;
+      renderCart();
+      renderProducts();
+    }
+
+    // ── Estado en vivo (WebSocket): corregir pedidos + avisar de listos ──
+    let editingId = null;
+    const orders = {};   // pedidos pendientes (activos)
+    const ready = {};    // pedidos marcados LISTOS por cocina, esperando que el mesero los recoja
+    let ws;
+
+    function drawerOpen(){ return document.getElementById('drawer').classList.contains('open'); }
+    function updateActiveBadge(){ document.getElementById('activeBadge').textContent = Object.keys(orders).length; }
+
+    function connectWS(){
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}`);
+      ws.onmessage = (e) => {
+        const m = JSON.parse(e.data);
+        if (m.type === 'init'){
+          for (const k in orders) delete orders[k];
+          (m.orders || []).forEach(o => orders[o.id] = o);
+          updateActiveBadge(); if (drawerOpen()) renderActiveList();
+        } else if (m.type === 'new_order'){
+          orders[m.order.id] = m.order; updateActiveBadge(); if (drawerOpen()) renderActiveList();
+        } else if (m.type === 'order_updated'){
+          orders[m.order.id] = m.order; if (drawerOpen()) renderActiveList();
+        } else if (m.type === 'order_cancelled'){
+          delete orders[m.id]; updateActiveBadge(); if (drawerOpen()) renderActiveList();
+        } else if (m.type === 'order_complete'){
+          const o = m.order || orders[m.id];
+          delete orders[m.id]; updateActiveBadge();
+          if (o) onOrderReady(o);
+          if (drawerOpen()) renderActiveList();
+        }
+      };
+      ws.onclose = () => setTimeout(connectWS, 3000);
+      ws.onerror = () => { try { ws.close(); } catch {} };
+    }
+
+    // ── Aviso "listo para recoger" (sonido + tarjeta persistente) ──
+    let _audioCtx = null;
+    function ensureAudio(){ try { if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (_audioCtx.state === 'suspended') _audioCtx.resume(); } catch {} }
+    document.addEventListener('pointerdown', ensureAudio);
+    function playReadyBeep(){
+      try {
+        ensureAudio(); if (!_audioCtx) return;
+        const t = _audioCtx.currentTime;
+        [880, 1175].forEach((f, i) => {
+          const o = _audioCtx.createOscillator(), g = _audioCtx.createGain();
+          o.connect(g); g.connect(_audioCtx.destination);
+          o.type = 'sine'; o.frequency.value = f;
+          const st = t + i * 0.18;
+          g.gain.setValueAtTime(0.0001, st);
+          g.gain.exponentialRampToValueAtTime(0.22, st + 0.03);
+          g.gain.exponentialRampToValueAtTime(0.0001, st + 0.16);
+          o.start(st); o.stop(st + 0.19);
+        });
+      } catch {}
+    }
+
+    function onOrderReady(o){
+      ready[o.id] = o;
+      renderReady();
+      playReadyBeep();
+      const dest = o.tipo === 'mesa' ? `Mesa ${esc(o.mesa)}` : (o.tipo === 'domicilio' ? 'Domicilio' : 'Para llevar');
+      toast(`🔔 Pedido #${o.id} LISTO — ${dest}`, 'ok');
+    }
+    function readyDestino(o){
+      if (o.tipo === 'domicilio') return { icon:'🛵', text:`Empacar #${o.id} · Domicilio`, sub:[esc(o.direccion), esc(o.telefono)].filter(Boolean).join(' · ') };
+      if (o.tipo === 'llevar')    return { icon:'🥡', text:`Entregar #${o.id} · Para llevar`, sub:esc(o.nombre) };
+      return { icon:'🍽️', text:`Llevar #${o.id} a Mesa ${esc(o.mesa)}`, sub:esc(o.nombre) };
+    }
+    function renderReady(){
+      const tray = document.getElementById('readyTray');
+      const list = Object.values(ready).sort((a,b) => (a.completedAt||0) - (b.completedAt||0));
+      if (!list.length){ tray.classList.remove('show'); tray.innerHTML = ''; return; }
+      tray.classList.add('show');
+      tray.innerHTML = `<div class="ready-title">🔔 Listos para entregar (${list.length})</div>` + list.map(o => {
+        const d = readyDestino(o);
+        const items = (o.items||[]).map(i => `${i.qty}× ${esc(i.name)}`).join(', ');
+        return `<div class="ready-card">
+          <div class="rc-main">
+            <div class="rc-dest">${d.icon} ${d.text}</div>
+            <div class="rc-items">${items}</div>
+            ${d.sub ? `<div class="rc-sub">${d.sub}</div>` : ''}
+          </div>
+          <button class="rc-btn" onclick="dismissReady(${o.id})">Recogido ✓</button>
+        </div>`;
+      }).join('');
+    }
+    function dismissReady(id){ delete ready[id]; renderReady(); }
+
+    // ── Cajón de pedidos activos (corregir) ──
+    function openActive(){
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('drawerBg').classList.add('open');
+      renderActiveList();
+    }
+    function closeActive(){
+      document.getElementById('drawer').classList.remove('open');
+      document.getElementById('drawerBg').classList.remove('open');
+    }
+    function renderActiveList(){
+      const body = document.getElementById('drawerBody');
+      const list = Object.values(orders).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+      if (!list.length){ body.innerHTML = '<div class="drawer-empty">No hay pedidos activos ahora mismo.</div>'; return; }
+      const tLabel = { mesa:'En mesa', domicilio:'Domicilio', llevar:'Para llevar' };
+      const tIcon  = { mesa:'🍽️', domicilio:'🛵', llevar:'🥡' };
+      body.innerHTML = list.map(o => {
+        const ic = tIcon[o.tipo] || '🍽️';
+        const titulo = o.tipo === 'mesa' ? `Mesa ${esc(o.mesa)}` : (esc(o.nombre) || tLabel[o.tipo] || '');
+        const lines = (o.items||[]).map(i => `<div class="ao-line"><span class="q">${i.qty}×</span> ${esc(i.name)}</div>`).join('');
+        const total = (o.items||[]).reduce((s,i) => s + (Number(i.price)||0)*(Number(i.qty)||0), 0);
+        return `<div class="ao-card">
+          <div class="ao-head"><span class="ao-title">${ic} ${titulo}</span><span class="ao-id">#${o.id}</span></div>
+          <div class="ao-body">${lines}<div class="ao-total"><span>Total</span><b>${fmtCOP(total)}</b></div></div>
+          <div class="ao-actions">
+            <button class="ao-btn edit" onclick="editOrder(${o.id})">Editar</button>
+            <button class="ao-btn cancel" onclick="cancelOrder(${o.id})">Cancelar</button>
+          </div></div>`;
+      }).join('');
+    }
+
+    function editOrder(id){
+      const o = orders[id];
+      if (!o) return;
+      for (const k in cart) delete cart[k];
+      (o.items||[]).forEach(i => { cart[i.name] = { baseId:null, name:i.name, price:Number(i.price)||0, qty:Number(i.qty)||0 }; });
+      setTipo(o.tipo || 'mesa');
+      document.getElementById('fMesa').value = o.mesa || '';
+      document.getElementById('fDireccion').value = o.direccion || '';
+      document.getElementById('fTelefono').value = o.telefono || '';
+      document.getElementById('fNombre').value = o.nombre || '';
+      document.getElementById('fNotas').value = o.notas || '';
+      editingId = id;
+      document.getElementById('cartTitle').textContent = 'Corrigiendo';
+      document.getElementById('editBannerText').textContent = `Editando pedido #${id}`;
+      document.getElementById('editBanner').classList.add('on');
+      document.getElementById('sendBtn').innerHTML = `<svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Guardar cambios`;
+      renderCart();
+      renderProducts();
+      closeActive();
+      toggleCart(true);
+    }
+
+    async function cancelOrder(id){
+      if (!confirm(`¿Cancelar el pedido #${id}? Se quitará de cocina.`)) return;
+      try {
+        const res = await fetch(`/pedido/${id}`, { method:'DELETE', headers: authHeaders() });
+        const data = await res.json();
+        if (data.success){
+          toast(`Pedido #${id} cancelado`, 'ok');
+          if (editingId === id) exitEdit();
+          // el mapa y la lista se actualizan solos por WebSocket (order_cancelled)
+        } else toast(data.error || 'No se pudo cancelar', 'bad');
+      } catch { toast('Error de conexión', 'bad'); }
+    }
+
+    function exitEdit(){
+      editingId = null;
+      document.getElementById('editBanner').classList.remove('on');
+      document.getElementById('cartTitle').textContent = 'Pedido';
+      resetOrder();
+    }
+
+    function toast(msg, kind){
+      const box = document.getElementById('toastBox');
+      const t = document.createElement('div');
+      t.className = 'toast' + (kind ? ' ' + kind : '');
+      t.textContent = msg;
+      box.appendChild(t);
+      setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    boot();
+  </script>
+</body>
+</html>

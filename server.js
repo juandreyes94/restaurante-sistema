@@ -45,6 +45,7 @@ const clients = new Set();
 // Cambia los PIN con variables de entorno PIN_COCINA / PIN_ADMIN, o aquí.
 const PINS = {
   cocina: process.env.PIN_COCINA || '1234',
+  mesero: process.env.PIN_MESERO || '5678',
   admin:  process.env.PIN_ADMIN  || '9876',
 };
 const _tokens = new Map(); // token -> role
@@ -176,8 +177,8 @@ function broadcast(msg) {
 
 // ── Rutas API ──
 
-// Recibir nuevo pedido
-app.post('/pedido', (req, res) => {
+// Recibir nuevo pedido (lo crea el mesero desde mesero.html; admin también puede)
+app.post('/pedido', requireRole('mesero', 'admin'), (req, res) => {
   const { mesa, items, nombre, notas, nit, email, tipo, direccion, telefono, agoMin } = req.body;
 
   // Tipo de pedido: 'mesa' | 'domicilio' | 'llevar' (si no llega, se deduce)
@@ -211,31 +212,68 @@ app.post('/pedido', (req, res) => {
 });
 
 // Marcar pedido como completado
-app.post('/pedido/:id/completar', (req, res) => {
+app.post('/pedido/:id/completar', requireRole('cocina', 'admin'), (req, res) => {
   const id = parseInt(req.params.id);
   const order = store.get(id);
   if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
   order.status = 'completado';
   order.completedAt = Date.now();
   store.save();
-  broadcast({ type: 'order_complete', id, completedAt: order.completedAt });
+  broadcast({ type: 'order_complete', id, completedAt: order.completedAt, order });
+  res.json({ success: true });
+});
+
+// Editar un pedido pendiente (corrección) — se refleja en cocina y admin al instante
+app.put('/pedido/:id', requireRole('mesero', 'admin'), (req, res) => {
+  const id = parseInt(req.params.id);
+  const order = store.get(id);
+  if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+  if (order.status !== 'pendiente') return res.status(409).json({ error: 'Solo se pueden editar pedidos pendientes' });
+
+  const { mesa, items, nombre, notas, tipo, direccion, telefono } = req.body || {};
+  if (!items?.length) return res.status(400).json({ error: 'El pedido debe tener al menos un producto' });
+
+  const tipoOk = ['mesa', 'domicilio', 'llevar'];
+  const tipoVal = tipoOk.includes(tipo) ? tipo : order.tipo;
+  if (tipoVal === 'mesa' && !mesa) return res.status(400).json({ error: 'Falta el número de mesa' });
+
+  order.tipo = tipoVal;
+  order.mesa = String(mesa || '');
+  order.direccion = (direccion || '').trim();
+  order.telefono  = (telefono  || '').trim();
+  order.items = items;
+  order.nombre = (nombre || '').trim();
+  order.notas  = (notas  || '').trim();
+  order.editedAt = Date.now();
+  store.save();
+  broadcast({ type: 'order_updated', order });
+  res.json({ success: true, order });
+});
+
+// Cancelar / eliminar un pedido pendiente
+app.delete('/pedido/:id', requireRole('mesero', 'admin'), (req, res) => {
+  const id = parseInt(req.params.id);
+  const order = store.get(id);
+  if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+  store.remove(id);
+  broadcast({ type: 'order_cancelled', id });
   res.json({ success: true });
 });
 
 // Listar pedidos pendientes
-app.get('/pedidos', (req, res) => {
+app.get('/pedidos', requireRole('cocina', 'mesero', 'admin'), (req, res) => {
   res.json(store.pendientes());
 });
 
 // Limpiar todos los pedidos completados
-app.delete('/pedidos/completados', (req, res) => {
+app.delete('/pedidos/completados', requireRole('cocina', 'admin'), (req, res) => {
   store.clearCompletados();
   broadcast({ type: 'history_cleared' });
   res.json({ success: true });
 });
 
 // Emitir factura electrónica via Factus
-app.post('/facturar/:id', async (req, res) => {
+app.post('/facturar/:id', requireRole('cocina', 'admin'), async (req, res) => {
   if (factusConfig.email === 'TU_EMAIL@ejemplo.com') {
     return res.status(503).json({ error: 'Configura tus credenciales en factus.config.js' });
   }
@@ -339,10 +377,11 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('╠════════════════════════════════════════╣');
   console.log(`║  Red local: http://${ip}:${PORT}         `);
   console.log(`║  Menú:      http://${ip}:${PORT}/menu.html`);
+  console.log(`║  Meseros:   http://${ip}:${PORT}/mesero.html`);
   console.log(`║  Comandas:  http://${ip}:${PORT}/comanda.html`);
   console.log(`║  Admin:     http://${ip}:${PORT}/admin.html`);
   console.log(`║  QR Codes:  http://${ip}:${PORT}/qr.html`);
   console.log('╚════════════════════════════════════════╝');
-  console.log(`🔒 Acceso por PIN — cocina: ${PINS.cocina}  ·  admin: ${PINS.admin}`);
+  console.log(`🔒 Acceso por PIN — cocina: ${PINS.cocina}  ·  mesero: ${PINS.mesero}  ·  admin: ${PINS.admin}`);
   console.log('💾 Datos persistentes en ./data/db.json\n');
 });
