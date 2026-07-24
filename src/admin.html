@@ -350,6 +350,32 @@
         <div id="productosBox"></div>
       </section>
 
+      <!-- INVENTARIO -->
+      <section class="panel" id="p-inventario">
+        <style>
+          .inv-table{width:100%;border-collapse:collapse;font-size:0.92rem}
+          .inv-table th{text-align:left;padding:0.7rem 1rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border)}
+          .inv-table td{padding:0.7rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle}
+          .inv-table tr:last-child td{border-bottom:none}
+          .inv-table tr.inv-low{background:rgba(220,38,38,0.05)}
+          .inv-stock{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:0.02em}
+          .inv-stock.bad{color:#dc2626}
+          .inv-actions{text-align:right;white-space:nowrap}
+          .inv-banner{display:flex;align-items:center;gap:0.5rem;padding:0.8rem 1rem;border-radius:12px;margin-bottom:1rem;font-size:0.9rem;font-weight:600}
+        </style>
+        <div style="display:flex;gap:0.7rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center">
+          <div class="search" style="margin:0;flex:1;min-width:180px">
+            <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="searchInsumos" placeholder="Buscar insumo..." oninput="renderInventario()" />
+          </div>
+          <button class="btn primary" onclick="openInsumo()">
+            <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Nuevo insumo
+          </button>
+        </div>
+        <div id="invAlert"></div>
+        <div id="insumosBox"></div>
+      </section>
+
       <!-- MESEROS -->
       <section class="panel" id="p-meseros">
         <div class="link-cards">
@@ -408,6 +434,35 @@
     </div>
   </div>
 
+  <!-- MODAL INSUMO -->
+  <div class="modal-overlay" id="insumoModal">
+    <div class="modal">
+      <h3 id="insModalTitle">Nuevo insumo</h3>
+      <label>Nombre<input type="text" id="iNombre" placeholder="Ej. Pan brioche" /></label>
+      <label>Unidad / porción<input type="text" id="iUnidad" placeholder="unidad · porción 150g · bolsa" /></label>
+      <label id="iStockRow">Stock inicial<input type="number" id="iStock" min="0" step="1" placeholder="0" /></label>
+      <label>Alerta de bajo stock (mínimo)<input type="number" id="iMin" min="0" step="1" placeholder="0" /></label>
+      <p class="muted" style="font-size:0.8rem;margin:0.2rem 0 0">El stock sube con “+ Entrada” y baja solo al vender. Aquí solo se ajusta el mínimo.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeInsumo()">Cancelar</button>
+        <button class="btn primary" onclick="saveInsumo()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ENTRADA DE STOCK -->
+  <div class="modal-overlay" id="entradaModal">
+    <div class="modal">
+      <h3 id="entTitle">Entrada de stock</h3>
+      <p class="muted" id="entStock" style="font-size:0.85rem;margin:0 0 0.6rem"></p>
+      <label>Unidades que entraron<input type="number" id="entCantidad" min="1" step="1" placeholder="Ej. 20" onkeydown="if(event.key==='Enter')saveEntrada()" /></label>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeEntrada()">Cancelar</button>
+        <button class="btn primary" onclick="saveEntrada()">Registrar entrada</button>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-tip" id="chartTip"></div>
   <div id="toastBox"></div>
 
@@ -419,7 +474,7 @@
       { id:'pedidos', label:'Pedidos', icon:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 14h4"/>', panel:'pedidos', badge:true },
       { id:'clientes', label:'Clientes', icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/>', panel:'clientes' },
       { id:'productos', label:'Productos', icon:'<path d="M3 8.5l9-5 9 5-9 5-9-5z"/><path d="M3 8.5v7l9 5 9-5v-7"/><path d="M12 13.5v7"/>', panel:'productos' },
-      { id:'inventario', label:'Inventario', icon:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>', soon:true },
+      { id:'inventario', label:'Inventario', icon:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>', panel:'inventario' },
       { id:'meseros', label:'Meseros', icon:'<path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/>', panel:'meseros' },
       { id:'cocina', label:'Cocina (KDS)', icon:'<path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/>', panel:'cocina' },
       { id:'creditos', label:'Créditos', icon:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>', soon:true },
@@ -499,7 +554,7 @@
       document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.id===id));
       document.getElementById('pageTitle').textContent=item.label==='Dashboard'?'Dashboard':item.label==='Pedidos'?'Gestión de Pedidos':item.label;
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-      if(item.panel){ document.getElementById('p-'+item.panel).classList.add('active'); if(item.panel==='productos') loadProductos(); }
+      if(item.panel){ document.getElementById('p-'+item.panel).classList.add('active'); if(item.panel==='productos') loadProductos(); if(item.panel==='inventario') loadInventario(); }
       else { // módulo futuro
         const g=document.getElementById('p-generic');
         g.innerHTML=`<div class="card"><div class="soon-box"><div class="ic-big">${svg(item.icon)}</div><h2>${item.label}</h2><p>Este módulo está en el plan y se activará próximamente. La estructura y el acceso ya están listos.</p></div></div>`;
@@ -829,6 +884,97 @@
       const box=document.getElementById('toastBox');
       const t=document.createElement('div'); t.className='toast'; t.textContent=msg; box.appendChild(t);
       setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); },3000);
+    }
+
+    // ── Inventario ──
+    let _insumos = [];
+    let _insEditId = null;
+    async function loadInventario(){
+      try { const r = await fetch('/insumos', { headers: authHeaders() }); _insumos = await r.json(); }
+      catch { _insumos = []; }
+      renderInventario();
+    }
+    function renderInventario(){
+      const q = (document.getElementById('searchInsumos').value || '').toLowerCase();
+      const bajos = _insumos.filter(i => Number(i.stock) <= Number(i.stock_min));
+      document.getElementById('invAlert').innerHTML = bajos.length
+        ? `<div class="inv-banner" style="background:rgba(220,38,38,0.1);color:#b91c1c">⚠️ ${bajos.length} insumo(s) en bajo stock: ${bajos.map(i=>esc(i.nombre)).join(', ')}</div>`
+        : `<div class="inv-banner" style="background:rgba(22,163,74,0.1);color:#15803d">✅ Todos los insumos por encima del mínimo.</div>`;
+      const list = _insumos.filter(i => !q || i.nombre.toLowerCase().includes(q) || (i.unidad||'').toLowerCase().includes(q));
+      const box = document.getElementById('insumosBox');
+      if (!list.length){ box.innerHTML = `<div class="card"><div class="soon-box"><p>No hay insumos. Crea el primero con “+ Nuevo insumo”.</p></div></div>`; return; }
+      box.innerHTML = `<div class="card" style="padding:0;overflow-x:auto">
+        <table class="inv-table">
+          <thead><tr><th>Insumo</th><th>Unidad</th><th>Stock</th><th>Mínimo</th><th></th></tr></thead>
+          <tbody>${list.map(insRow).join('')}</tbody>
+        </table></div>`;
+    }
+    function insRow(i){
+      const bajo = Number(i.stock) <= Number(i.stock_min);
+      return `<tr class="${bajo?'inv-low':''}">
+        <td><b>${esc(i.nombre)}</b></td>
+        <td class="muted">${esc(i.unidad)}</td>
+        <td><span class="inv-stock ${bajo?'bad':''}">${i.stock}</span></td>
+        <td class="muted">${i.stock_min}</td>
+        <td class="inv-actions">
+          <button class="mini on" onclick="entradaInsumo(${i.id})">+ Entrada</button>
+          <button class="mini" onclick="openInsumo(${i.id})">Editar</button>
+        </td></tr>`;
+    }
+    let _entradaId = null;
+    function entradaInsumo(id){
+      const ins = _insumos.find(x => x.id === id); if (!ins) return;
+      _entradaId = id;
+      document.getElementById('entTitle').textContent = `Entrada de stock — ${ins.nombre}`;
+      document.getElementById('entStock').textContent = `Stock actual: ${ins.stock} ${ins.unidad}`;
+      document.getElementById('entCantidad').value = '';
+      document.getElementById('entradaModal').classList.add('open');
+      setTimeout(() => document.getElementById('entCantidad').focus(), 50);
+    }
+    function closeEntrada(){ document.getElementById('entradaModal').classList.remove('open'); }
+    async function saveEntrada(){
+      const ins = _insumos.find(x => x.id === _entradaId);
+      const cantidad = Number(document.getElementById('entCantidad').value);
+      if (!(cantidad > 0)){ toast('Indica cuántas unidades entraron'); return; }
+      try {
+        const r = await fetch(`/insumos/${_entradaId}/entrada`, { method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify({ cantidad }) });
+        const d = await r.json();
+        if (d.success){ toast(`+${cantidad} · ${ins?.nombre} → stock ${d.stock}`); closeEntrada(); loadInventario(); }
+        else toast('❌ ' + (d.error || 'Error'));
+      } catch { toast('❌ Error de conexión'); }
+    }
+    function openInsumo(id){
+      const i = id ? _insumos.find(x => x.id === id) : null;
+      _insEditId = id || null;
+      document.getElementById('insModalTitle').textContent = i ? 'Editar insumo' : 'Nuevo insumo';
+      document.getElementById('iNombre').value = i ? i.nombre : '';
+      document.getElementById('iUnidad').value = i ? i.unidad : 'unidad';
+      document.getElementById('iStock').value = i ? i.stock : 0;
+      document.getElementById('iMin').value = i ? i.stock_min : 0;
+      document.getElementById('iStockRow').style.display = i ? 'none' : 'block'; // el stock existente solo cambia con entradas/ventas
+      document.getElementById('insumoModal').classList.add('open');
+      setTimeout(() => document.getElementById('iNombre').focus(), 50);
+    }
+    function closeInsumo(){ document.getElementById('insumoModal').classList.remove('open'); }
+    async function saveInsumo(){
+      const body = {
+        nombre: document.getElementById('iNombre').value.trim(),
+        unidad: document.getElementById('iUnidad').value.trim() || 'unidad',
+        stock_min: Number(document.getElementById('iMin').value) || 0,
+      };
+      if (!body.nombre){ toast('El nombre es obligatorio'); return; }
+      try {
+        let r;
+        if (_insEditId){
+          r = await fetch(`/insumos/${_insEditId}`, { method:'PUT', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify(body) });
+        } else {
+          body.stock = Number(document.getElementById('iStock').value) || 0;
+          r = await fetch('/insumos', { method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify(body) });
+        }
+        const d = await r.json();
+        if (d.success){ toast('Insumo guardado'); closeInsumo(); loadInventario(); }
+        else toast('❌ ' + (d.error || 'Error'));
+      } catch { toast('❌ Error de conexión'); }
     }
 
     boot();

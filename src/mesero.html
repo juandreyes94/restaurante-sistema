@@ -500,7 +500,7 @@
       if (tipo === 'mesa' && !mesa){ toast('Indica el número de mesa', 'bad'); document.getElementById('fMesa').focus(); return; }
       if (tipo === 'domicilio' && !direccion){ toast('Indica la dirección de entrega', 'bad'); document.getElementById('fDireccion').focus(); return; }
 
-      const items = Object.values(cart).map(c => ({ name: c.name, price: c.price, qty: c.qty }));
+      const items = Object.values(cart).map(c => ({ name: c.name, price: c.price, qty: c.qty, productoId: c.baseId }));
       const btn = document.getElementById('sendBtn');
       btn.disabled = true; const prev = btn.innerHTML; btn.innerHTML = 'Guardando…';
       try {
