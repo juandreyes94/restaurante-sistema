@@ -7,6 +7,65 @@ se hacen todos juntos cuando el proyecto vaya a desplegarse en un servidor real.
 
 ---
 
+## 🎯 PRÓXIMO PASO — Carga de imágenes de productos a Supabase Storage
+
+Hoy las fotos de productos se sirven por **ruta local** (`img/hamburguesa-coraje.jpg`)
+o URL. Falta que el dueño pueda **subir fotos desde el panel** y que se guarden en
+**Supabase Storage** (para que el catálogo sea 100% autogestionable y clonable).
+
+**Plan concreto (para retomar):**
+1. **Supabase:** crear un bucket **público** llamado `productos` en Storage
+   (Storage → New bucket → Public).
+2. **Backend (`server.js` + `store-supabase.js`):**
+   - Agregar `multer` (memory storage) para recibir el archivo.
+   - Endpoint `POST /upload` (rol admin) → recibe imagen → `supa.storage.from('productos')
+     .upload(nombreUnico, buffer, { contentType })` → devuelve la **URL pública**
+     (`supa.storage.from('productos').getPublicUrl(path)`).
+   - Método `store.uploadImagen(buffer, filename, mime)` en el adaptador.
+   - Ojo: `sharp` se quitó a propósito (rompía en Railung/Linux) — **no** re-agregarlo;
+     si se quiere limitar peso, validar tamaño en el cliente o `multer` `limits`.
+3. **Frontend (`src/admin.html`, modal de producto):**
+   - Agregar `<input type="file" accept="image/*">` en el modal.
+   - Al elegir archivo: subirlo a `/upload`, recibir la URL, y meterla en `#fImagen`
+     (mostrar preview). El resto del guardado de producto ya funciona igual.
+4. (Opcional) Migrar las imágenes actuales de `src/img/*.jpg` al bucket para no depender
+   de archivos locales al desplegar.
+
+Notas del estado actual de datos (por si confunde al retomar): la BD de Supabase tiene
+**datos de prueba** de esta sesión — un pedido #3 completado (por eso el dashboard
+muestra ~$32.900) y algún movimiento de inventario de los tests. Se pueden borrar sin
+problema desde el SQL Editor si se quiere arrancar limpio.
+
+---
+
+## ✅ Motor Supabase + Inventario (hecho — 2026-07-23, commit 11c2fc1)
+
+El sistema pasó de JSON local a **Supabase** y ahora maneja **inventario por unidades**.
+Todo probado end-to-end (mesero → cocina → stock baja; entrada de reposición → sube).
+
+- **Base de datos** (proyecto Supabase `bjzdodqqvoszarvdaapz`, un proyecto por cliente):
+  tablas `config, categorias, productos, insumos, recetas, pedidos, pedido_items,
+  movimientos_inventario` + funciones SQL `descontar/devolver_inventario_pedido` y
+  `recalcular_agotados`. SQL en `sql/01_schema.sql` y `sql/02_seed_productos.sql`.
+- **Adaptador `store-supabase.js`** — caché en memoria + write-through. Misma interfaz
+  que el viejo `store.js` (por eso `server.js` casi no cambió de forma) + métodos de
+  inventario. Credenciales en `supabase.config.js` (gitignored; `.example` para clonar).
+- **`server.js`** — usa el adaptador, rutas de escritura async, catálogo hardcodeado
+  eliminado, nuevos endpoints: `GET/POST/PUT /insumos`, `POST /insumos/:id/entrada`,
+  `GET /inventario/alertas`.
+- **`mesero.html`** — manda `productoId` en cada ítem (para descontar la receta correcta).
+- **`admin.html`** — sección **Inventario** activa: tabla stock/mínimo, banner de alertas,
+  modal "Entrada" (reposición), modal nuevo/editar insumo.
+- **Inventario por porcionado:** insumos en unidades, recetas producto↔insumo. Vender
+  descuenta según receta; cancelar devuelve; productos se marcan `agotado` solos en 0.
+  Seed: 29 insumos (stock 10) + 87 recetas (`scripts/seed-insumos.js`). Recetas deducidas
+  del menú — **ajustar cuando llegue el inventario real** del cliente.
+- **Clonar a otro cliente:** copiar repo → nuevo proyecto Supabase → correr `sql/*` →
+  `node scripts/seed-insumos.js` → crear su `supabase.config.js`. La parte visual se
+  retoca por cliente (el motor de datos es lo reutilizable).
+
+---
+
 ## 🔴 Pendiente para el despliegue
 
 ### 1. PINs y secretos fuera del código
