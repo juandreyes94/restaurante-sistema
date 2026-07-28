@@ -376,6 +376,23 @@
         <div id="insumosBox"></div>
       </section>
 
+      <!-- RECETAS -->
+      <section class="panel" id="p-recetas">
+        <div class="link-cards">
+          <a class="link-card" href="recetas.html" target="_blank">
+            <span class="ic-box" style="background:var(--red)"><svg class="i" viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg></span>
+            <div><b>Abrir Recetas</b><span>Qué insumo consume cada plato · la edita cocina</span></div>
+          </a>
+        </div>
+        <div class="card" style="margin-top:1rem;padding:1.1rem 1.3rem">
+          <p class="muted" style="font-size:0.87rem;line-height:1.6;margin:0">
+            La receta es lo que conecta el menú con el inventario: al vender un plato se descuenta
+            automáticamente la cantidad que aquí se define de cada insumo.
+            Un plato <b>sin receta no descuenta nada</b>.
+          </p>
+        </div>
+      </section>
+
       <!-- MESEROS -->
       <section class="panel" id="p-meseros">
         <div class="link-cards">
@@ -475,6 +492,7 @@
       { id:'clientes', label:'Clientes', icon:'<circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/>', panel:'clientes' },
       { id:'productos', label:'Productos', icon:'<path d="M3 8.5l9-5 9 5-9 5-9-5z"/><path d="M3 8.5v7l9 5 9-5v-7"/><path d="M12 13.5v7"/>', panel:'productos' },
       { id:'inventario', label:'Inventario', icon:'<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>', panel:'inventario' },
+      { id:'recetas', label:'Recetas', icon:'<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 12h7M8 16h4"/>', panel:'recetas' },
       { id:'meseros', label:'Meseros', icon:'<path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/>', panel:'meseros' },
       { id:'cocina', label:'Cocina (KDS)', icon:'<path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/>', panel:'cocina' },
       { id:'creditos', label:'Créditos', icon:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/>', soon:true },

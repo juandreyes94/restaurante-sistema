@@ -154,6 +154,24 @@ app.get('/inventario/alertas', requireRole('cocina', 'admin'), async (req, res) 
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Recetas (las edita cocina desde recetas.html) ──
+app.get('/recetas', requireRole('cocina', 'admin'), async (req, res) => {
+  try { res.json(await store.recetas()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reemplaza la receta completa de un producto (items: [{insumo_id, cantidad}])
+app.put('/recetas/:productoId', requireRole('cocina', 'admin'), async (req, res) => {
+  const productoId = parseInt(req.params.productoId);
+  if (!store.productGet(productoId)) return res.status(404).json({ error: 'Producto no encontrado' });
+  const items = req.body?.items;
+  if (!Array.isArray(items)) return res.status(400).json({ error: 'Falta la lista de insumos' });
+  try {
+    const filas = await store.recetaSet(productoId, items);
+    res.json({ success: true, items: filas });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 // ── WebSocket ──
 wss.on('connection', (ws) => {
   clients.add(ws);
