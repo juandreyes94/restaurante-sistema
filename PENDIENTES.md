@@ -3,7 +3,35 @@
 Notas de endurecimiento del sistema. Estos puntos **no** aplican en pruebas locales;
 se hacen todos juntos cuando el proyecto vaya a desplegarse en un servidor real.
 
-Última actualización: 2026-07-23
+Última actualización: 2026-07-27
+
+---
+
+## ✅ Inventario real + recetas + pantalla de recetas (hecho — 2026-07-27)
+
+Llegó la planilla de inventario del cliente (foto `inventario coraje.jpeg`, 39 insumos).
+
+- **Cambio de modelo**: el stock deja de contarse en *porciones* y pasa a la **unidad base**
+  (gramos / unidades), que es como cuenta el cliente. `recetas.cantidad` = el peso por porción.
+  El motor SQL no cambió: `descontar_inventario_pedido()` y `recalcular_agotados()` ya eran
+  agnósticos de la unidad.
+- **Excel de carga**: `C:/Users/Principal/Desktop/coraje/inventario-coraje-carga-supabase.xlsx`
+  (hojas: como_cargar, insumos, recetas, mapeo_nombres, revisar_con_cliente, referencia_foto).
+- **`scripts/cargar-inventario.js`** — lee ese Excel y lo aplica a Supabase en orden:
+  renombrar (conserva ids) → dividir Pan brioche → crear/actualizar insumos → reemplazar
+  recetas → `recalcular_agotados()`. Tiene `--dry-run` y es idempotente. Usa `xlsx` (nueva dep).
+- **Recetas completas**: 35 productos / 146 líneas, derivadas de la descripción real de cada
+  plato en `sql/02_seed_productos.sql` (antes eran 87 líneas con cantidad 1).
+- **`src/recetas.html`** — pantalla nueva para que **cocina** (PIN 1234) o admin arme y edite
+  recetas: buscador por plato o ingrediente, filtro "sin receta", y "alcanza para N platos"
+  calculado contra el stock real. Endpoints `GET /recetas` y `PUT /recetas/:productoId`
+  (rol cocina|admin) + `store.recetas()` / `store.recetaSet()`. Enlazada desde el admin.
+
+**Pendiente de confirmar con el cliente** (hoja `revisar_con_cliente`): peso del bloque de queso
+(se asumió 500 g), Huevos de Codorniz y Carne Desmechada tienen stock máximo que parece error de
+digitación, y el "Chuzo Desgranado" es res/pollo/mixto a elección (hoy descuenta res). Insumos
+sin usar en ninguna receta: Cebollín, Perejil Crespo, Pollo, Salsa Caramelizada.
+Falta la pestaña "COSTOS GENERAL" del cliente para llenar `costo_unitario`.
 
 ---
 

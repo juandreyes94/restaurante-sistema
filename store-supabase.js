@@ -263,6 +263,41 @@ async function alertas() {
   return (data || []).filter(i => Number(i.stock) <= Number(i.stock_min));
 }
 
+// ── Recetas (qué insumos consume cada producto) ──
+async function recetas() {
+  const { data, error } = await supa.from('recetas').select('producto_id,insumo_id,cantidad');
+  if (error) throw error;
+  return data || [];
+}
+
+// Reemplaza la receta completa de un producto.
+// items: [{ insumo_id, cantidad }]  ·  lista vacía = producto sin receta
+async function recetaSet(productoId, items) {
+  const filas = (items || [])
+    .map(it => ({
+      producto_id: productoId,
+      insumo_id: Number(it.insumo_id),
+      cantidad: Number(it.cantidad),
+    }))
+    .filter(f => f.insumo_id > 0 && f.cantidad > 0);
+
+  // Un insumo no puede ir dos veces en la misma receta (unique en la tabla)
+  const vistos = new Set();
+  for (const f of filas) {
+    if (vistos.has(f.insumo_id)) throw new Error('Hay un insumo repetido en la receta');
+    vistos.add(f.insumo_id);
+  }
+
+  const { error: eDel } = await supa.from('recetas').delete().eq('producto_id', productoId);
+  if (eDel) throw eDel;
+  if (filas.length) {
+    const { error: eIns } = await supa.from('recetas').insert(filas);
+    if (eIns) throw eIns;
+  }
+  await refreshProductosAgotados();
+  return filas;
+}
+
 // Refresca el flag "agotado" de los productos en caché tras cambios de stock
 async function refreshProductosAgotados() {
   await supa.rpc('recalcular_agotados');
@@ -288,6 +323,8 @@ module.exports = {
   productAdd, productUpdate, productDelete,
   // Inventario
   insumos, insumoAdd, insumoEntrada, insumoUpdate, movimientos, alertas,
+  // Recetas
+  recetas, recetaSet,
   // Compatibilidad: el catálogo ahora vive en la BD, no se siembra desde el código
   ensureCatalog: () => {},
   save: () => {},

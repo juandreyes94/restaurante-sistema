@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recetas — Coraje</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --red:#FB3E2C; --red-dark:#d62b1a; --green:#16a34a; --green-dark:#15803d;
+      --amber:#f59e0b;
+      --bg:#f5f2ee; --surface:#ffffff; --surface-2:#f7f8fa;
+      --ink:#1f2430; --ink-soft:#6b7280; --border:#e4e7ec; --muted:#9aa1ac;
+      --shadow:0 6px 20px rgba(23,29,41,0.08); --shadow-lg:0 14px 40px rgba(23,29,41,0.14);
+    }
+    html { font-size:16px; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+    .i { width:1.2em; height:1.2em; display:inline-block; vertical-align:-0.22em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+    /* ── Login ── */
+    .login-overlay { position:fixed; inset:0; z-index:200; background:linear-gradient(140deg,var(--red),var(--red-dark)); display:none; align-items:center; justify-content:center; padding:1.5rem; }
+    .login-card { background:var(--surface); border-radius:20px; box-shadow:var(--shadow-lg); width:100%; max-width:360px; padding:2rem 1.75rem; text-align:center; animation:slideIn 0.4s ease both; }
+    .login-card img { height:2.4rem; width:auto; margin-bottom:0.6rem; }
+    .login-card h1 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.06em; }
+    .login-card p { color:var(--ink-soft); font-size:0.85rem; margin-top:0.2rem; }
+    .role-tabs { display:flex; gap:0.4rem; margin-top:1.1rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
+    .role-tab { flex:1; padding:0.55rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:0.4rem; }
+    .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+    .role-tab .i { width:1.1em; height:1.1em; }
+    .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; transition:border-color 0.2s; }
+    .pin-input:focus { border-color:var(--red); }
+    .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+    @keyframes slideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+    .login-btn { width:100%; margin-top:1rem; padding:0.85rem; background:var(--red); color:#fff; border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.08em; cursor:pointer; transition:background 0.2s; }
+    .login-btn:hover { background:var(--red-dark); }
+    .login-err { color:var(--red); font-size:0.82rem; margin-top:0.7rem; min-height:1.1rem; font-weight:600; }
+
+    /* ── Header ── */
+    header { background:linear-gradient(135deg,var(--red),var(--red-dark)); color:#fff; padding:1rem 1.4rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; box-shadow:0 4px 18px rgba(214,43,26,0.25); position:sticky; top:0; z-index:30; }
+    header img { height:2.1rem; width:auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+    .logo-tag { font-family:'Bebas Neue',sans-serif; font-size:1.35rem; letter-spacing:0.1em; line-height:1; }
+    .sub { font-size:0.74rem; opacity:0.9; }
+    .head-actions { margin-left:auto; display:flex; gap:0.5rem; align-items:center; }
+    .ghost-btn { background:rgba(0,0,0,0.22); color:#fff; border:none; border-radius:10px; padding:0.5rem 0.8rem; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.8rem; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; transition:background 0.15s; }
+    .ghost-btn:hover { background:rgba(0,0,0,0.36); }
+
+    /* ── Contenido ── */
+    .wrap { padding:1.4rem; max-width:1180px; margin:0 auto; }
+    .toolbar { display:flex; gap:0.7rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .search { flex:1; min-width:200px; display:flex; align-items:center; gap:0.5rem; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0.6rem 0.85rem; box-shadow:var(--shadow); }
+    .search input { flex:1; border:none; outline:none; font-family:inherit; font-size:0.92rem; color:var(--ink); background:transparent; }
+    .chips { display:flex; gap:0.4rem; flex-wrap:wrap; }
+    .chip { padding:0.45rem 0.85rem; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--ink-soft); font-size:0.82rem; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+    .chip.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+    .chip.warn.active { background:var(--red); border-color:var(--red); }
+
+    .banner { display:flex; align-items:center; gap:0.6rem; padding:0.85rem 1rem; border-radius:12px; margin-bottom:1.1rem; font-size:0.9rem; font-weight:600; }
+    .banner.bad { background:rgba(251,62,44,0.1); color:#b91c1c; }
+    .banner.good { background:rgba(22,163,74,0.1); color:var(--green-dark); }
+
+    .cat-title { font-family:'Bebas Neue',sans-serif; font-size:1.15rem; letter-spacing:0.06em; color:var(--ink-soft); margin:1.3rem 0 0.6rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:0.9rem; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1rem 1.1rem; box-shadow:var(--shadow); cursor:pointer; transition:transform 0.15s,border-color 0.2s; display:flex; flex-direction:column; gap:0.6rem; }
+    .card:hover { transform:translateY(-2px); border-color:var(--red); }
+    .card-top { display:flex; align-items:flex-start; gap:0.6rem; }
+    .card h3 { font-size:0.98rem; font-weight:700; line-height:1.3; flex:1; }
+    .tag { font-size:0.62rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; padding:0.22rem 0.5rem; border-radius:999px; white-space:nowrap; }
+    .tag.none { background:rgba(251,62,44,0.12); color:#b91c1c; }
+    .tag.out { background:rgba(245,158,11,0.16); color:#b45309; }
+    .ing { font-size:0.82rem; color:var(--ink-soft); line-height:1.55; }
+    .ing b { color:var(--ink); font-weight:600; }
+    .rinde { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; font-weight:700; margin-top:auto; padding-top:0.5rem; border-top:1px dashed var(--border); }
+    .rinde .n { font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:0.02em; }
+    .rinde.ok { color:var(--green-dark); } .rinde.low { color:#b45309; } .rinde.zero { color:#b91c1c; }
+
+    /* ── Editor ── */
+    .modal-overlay { position:fixed; inset:0; z-index:150; background:rgba(23,29,41,0.5); display:none; align-items:center; justify-content:center; padding:1rem; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg); width:100%; max-width:620px; max-height:92vh; display:flex; flex-direction:column; animation:slideIn 0.25s ease; }
+    .modal-head { padding:1.2rem 1.4rem 0.9rem; border-bottom:1px solid var(--border); }
+    .modal-head h3 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.03em; }
+    .modal-head p { font-size:0.82rem; color:var(--ink-soft); margin-top:0.2rem; }
+    .modal-body { padding:1rem 1.4rem; overflow-y:auto; flex:1; }
+    .modal-foot { padding:0.9rem 1.4rem 1.2rem; border-top:1px solid var(--border); display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; }
+    .btn { display:inline-flex; align-items:center; gap:0.45rem; padding:0.65rem 1.1rem; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.87rem; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--ink); transition:transform 0.15s; }
+    .btn:hover { transform:translateY(-1px); }
+    .btn.primary { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 4px 14px rgba(251,62,44,0.35); }
+    .btn.primary:hover { background:var(--red-dark); }
+    .btn.ghost { background:transparent; border-style:dashed; color:var(--ink-soft); width:100%; justify-content:center; }
+    .btn.ghost:hover { color:var(--red); border-color:var(--red); }
+
+    .line { display:flex; gap:0.5rem; align-items:center; padding:0.5rem 0; border-bottom:1px solid var(--border); }
+    .line:last-of-type { border-bottom:none; }
+    .line select, .line input { font-family:inherit; font-size:0.88rem; color:var(--ink); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:0.55rem 0.6rem; outline:none; }
+    .line select { flex:1; min-width:0; }
+    .line select:focus, .line input:focus { border-color:var(--red); }
+    .line input { width:92px; text-align:right; font-weight:700; }
+    .line .u { font-size:0.78rem; color:var(--muted); width:56px; flex:none; }
+    .line .del { background:none; border:none; color:var(--muted); cursor:pointer; padding:0.35rem; border-radius:8px; flex:none; }
+    .line .del:hover { color:var(--red); background:rgba(251,62,44,0.08); }
+    .line-stock { font-size:0.72rem; color:var(--muted); padding:0 0 0.5rem 0.1rem; }
+    .line-stock.bad { color:#b91c1c; font-weight:700; }
+    .empty-note { text-align:center; color:var(--ink-soft); font-size:0.88rem; padding:1.4rem 0; }
+
+    #toastBox { position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:0.5rem; align-items:center; }
+    .toast { background:var(--ink); color:#fff; padding:0.7rem 1.2rem; border-radius:12px; font-size:0.88rem; font-weight:600; box-shadow:var(--shadow-lg); }
+
+    @media (max-width:600px) {
+      .wrap { padding:1rem; }
+      .grid { grid-template-columns:1fr; }
+      .line { flex-wrap:wrap; }
+      .line select { flex-basis:100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <img src="logo.png" alt="Coraje" />
+      <h1>Recetas</h1>
+      <p>Elige tu acceso e ingresa el código</p>
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="cocina" onclick="pickRole('cocina')">
+          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
+        <button class="role-tab" data-role="admin" onclick="pickRole('admin')">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
+      </div>
+      <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off"
+             placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
+      <button class="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <div id="app" style="display:none">
+    <header>
+      <img src="logo.png" alt="Coraje" />
+      <div>
+        <div class="logo-tag">Recetas</div>
+        <div class="sub">Qué consume cada plato del inventario</div>
+      </div>
+      <div class="head-actions">
+        <a class="ghost-btn" href="comanda.html">
+          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg>
+          Comandas
+        </a>
+        <button class="ghost-btn" onclick="logout()">Salir</button>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="toolbar">
+        <div class="search">
+          <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="q" placeholder="Buscar plato o ingrediente..." oninput="render()" />
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div id="banner"></div>
+      <div id="lista"></div>
+    </div>
+  </div>
+
+  <!-- EDITOR DE RECETA -->
+  <div class="modal-overlay" id="edModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="edTitle">Receta</h3>
+        <p id="edSub">Al vender este plato se descuenta esta cantidad de cada insumo.</p>
+      </div>
+      <div class="modal-body">
+        <div id="edLines"></div>
+        <button class="btn ghost" style="margin-top:0.8rem" onclick="addLine()">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Agregar insumo
+        </button>
+      </div>
+      <div class="modal-foot">
+        <span id="edRinde" style="font-size:0.83rem;font-weight:700"></span>
+        <span style="margin-left:auto;display:flex;gap:0.6rem">
+          <button class="btn" onclick="closeEditor()">Cancelar</button>
+          <button class="btn primary" onclick="saveReceta()">Guardar receta</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastBox"></div>
+
+  <script>
+    // ── Acceso (mismo token que el resto del sistema) ──
+    const AUTH_KEY = 'coraje_auth';
+    const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } };
+    const authHeaders = () => { const a = getAuth(); return a?.token ? { 'x-auth-token': a.token } : {}; };
+    let selRole = 'cocina';
+
+    function pickRole(r) {
+      selRole = r;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
+      document.getElementById('pinInput').focus();
+    }
+    function boot() {
+      const a = getAuth();
+      if (a && a.token && (a.role === 'cocina' || a.role === 'admin')) start();
+      else { document.getElementById('loginOverlay').style.display = 'flex'; setTimeout(() => document.getElementById('pinInput').focus(), 100); }
+    }
+    async function doLogin() {
+      const input = document.getElementById('pinInput'), err = document.getElementById('loginErr');
+      err.textContent = '';
+      try {
+        const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin: input.value.trim() }) });
+        const data = await res.json();
+        if (!data.ok) throw new Error('Código incorrecto');
+        if (data.role !== selRole) throw new Error(`Ese código no es de ${selRole === 'admin' ? 'Administrador' : 'Cocina'}`);
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
+        start();
+      } catch (e) {
+        input.classList.add('err'); err.textContent = e.message || 'Código incorrecto';
+        input.value = ''; input.focus(); setTimeout(() => input.classList.remove('err'), 400);
+      }
+    }
+    function logout() { localStorage.removeItem(AUTH_KEY); location.reload(); }
+
+    function start() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      loadAll();
+    }
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    function toast(msg) {
+      const box = document.getElementById('toastBox');
+      const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; box.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    // ── Datos ──
+    let PRODUCTOS = [], INSUMOS = [], RECETAS = [];
+    let filtro = 'todas';
+    const insById = (id) => INSUMOS.find(i => i.id === id);
+    const recetaDe = (pid) => RECETAS.filter(r => r.producto_id === pid);
+
+    async function loadAll() {
+      try {
+        const [p, i, r] = await Promise.all([
+          fetch('/productos').then(r => r.json()),
+          fetch('/insumos',  { headers: authHeaders() }).then(r => r.json()),
+          fetch('/recetas',  { headers: authHeaders() }).then(r => r.json()),
+        ]);
+        PRODUCTOS = Array.isArray(p) ? p : [];
+        INSUMOS   = (Array.isArray(i) ? i : []).filter(x => x.activo !== false)
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        RECETAS   = Array.isArray(r) ? r : [];
+        buildChips(); render();
+      } catch { toast('❌ No pude cargar los datos'); }
+    }
+
+    // ── Cuántos platos alcanzan con el stock actual ──
+    function rinde(pid) {
+      const lineas = recetaDe(pid);
+      if (!lineas.length) return null;
+      let min = Infinity;
+      for (const l of lineas) {
+        const ins = insById(l.insumo_id);
+        if (!ins || !(Number(l.cantidad) > 0)) continue;
+        min = Math.min(min, Math.floor(Number(ins.stock) / Number(l.cantidad)));
+      }
+      return Number.isFinite(min) ? Math.max(0, min) : null;
+    }
+
+    function buildChips() {
+      const cats = [...new Set(PRODUCTOS.map(p => p.categoria).filter(Boolean))];
+      const sinReceta = PRODUCTOS.filter(p => !recetaDe(p.id).length).length;
+      const chips = [
+        `<button class="chip ${filtro === 'todas' ? 'active' : ''}" onclick="setFiltro('todas')">Todas</button>`,
+        ...cats.map(cat => `<button class="chip ${filtro === cat ? 'active' : ''}" onclick="setFiltro('${esc(cat)}')">${esc(cat)}</button>`),
+        `<button class="chip warn ${filtro === '__sin' ? 'active' : ''}" onclick="setFiltro('__sin')">Sin receta (${sinReceta})</button>`,
+      ];
+      document.getElementById('chips').innerHTML = chips.join('');
+    }
+    function setFiltro(f) { filtro = f; buildChips(); render(); }
+
+    function render() {
+      const q = (document.getElementById('q').value || '').trim().toLowerCase();
+      const sinReceta = PRODUCTOS.filter(p => !recetaDe(p.id).length);
+
+      document.getElementById('banner').innerHTML = sinReceta.length
+        ? `<div class="banner bad">⚠️ ${sinReceta.length} plato(s) sin receta — al venderlos <u>no se descuenta nada</u> del inventario.</div>`
+        : `<div class="banner good">✅ Todos los platos tienen receta: el inventario se descuenta solo.</div>`;
+
+      let lista = PRODUCTOS.slice();
+      if (filtro === '__sin') lista = lista.filter(p => !recetaDe(p.id).length);
+      else if (filtro !== 'todas') lista = lista.filter(p => p.categoria === filtro);
+      if (q) {
+        lista = lista.filter(p =>
+          p.nombre.toLowerCase().includes(q) ||
+          recetaDe(p.id).some(l => (insById(l.insumo_id)?.nombre || '').toLowerCase().includes(q)));
+      }
+
+      const box = document.getElementById('lista');
+      if (!lista.length) { box.innerHTML = `<div class="empty-note">No hay platos que coincidan.</div>`; return; }
+
+      const porCat = new Map();
+      lista.forEach(p => { const c = p.categoria || 'Sin categoría'; if (!porCat.has(c)) porCat.set(c, []); porCat.get(c).push(p); });
+
+      box.innerHTML = [...porCat].map(([cat, prods]) => `
+        <div class="cat-title">${esc(cat)}</div>
+        <div class="grid">${prods.map(cardHTML).join('')}</div>
+      `).join('');
+    }
+
+    function cardHTML(p) {
+      const lineas = recetaDe(p.id);
+      const r = rinde(p.id);
+      const ing = lineas.map(l => {
+        const ins = insById(l.insumo_id);
+        return ins ? `<b>${esc(ins.nombre)}</b> ${l.cantidad} ${esc(ins.unidad)}` : null;
+      }).filter(Boolean).join(' · ');
+
+      const rindeHTML = r === null ? '' :
+        `<div class="rinde ${r === 0 ? 'zero' : r < 5 ? 'low' : 'ok'}">
+           <svg class="i" viewBox="0 0 24 24"><path d="M3 8.5l9-5 9 5-9 5-9-5z"/><path d="M3 8.5v7l9 5 9-5v-7"/></svg>
+           Alcanza para <span class="n">${r}</span></div>`;
+
+      return `<div class="card" onclick="openEditor(${p.id})">
+        <div class="card-top">
+          <h3>${esc(p.nombre)}</h3>
+          ${!lineas.length ? '<span class="tag none">sin receta</span>' : p.agotado ? '<span class="tag out">agotado</span>' : ''}
+        </div>
+        <div class="ing">${lineas.length ? ing : 'Nadie definió qué consume este plato. Tócalo para armarlo.'}</div>
+        ${rindeHTML}
+      </div>`;
+    }
+
+    // ── Editor ──
+    let edProd = null, edLines = [];
+
+    function openEditor(pid) {
+      edProd = PRODUCTOS.find(p => p.id === pid);
+      if (!edProd) return;
+      edLines = recetaDe(pid).map(l => ({ insumo_id: l.insumo_id, cantidad: Number(l.cantidad) }));
+      document.getElementById('edTitle').textContent = edProd.nombre;
+      document.getElementById('edSub').textContent = 'Al vender este plato se descuenta esta cantidad de cada insumo.';
+      renderLines();
+      document.getElementById('edModal').classList.add('open');
+    }
+    function closeEditor() { document.getElementById('edModal').classList.remove('open'); edProd = null; }
+
+    function renderLines() {
+      const box = document.getElementById('edLines');
+      if (!edLines.length) {
+        box.innerHTML = `<div class="empty-note">Este plato todavía no descuenta nada.<br/>Agrega los insumos que consume.</div>`;
+      } else {
+        box.innerHTML = edLines.map((l, idx) => {
+          const ins = insById(l.insumo_id);
+          const alcanza = ins && l.cantidad > 0 ? Math.floor(Number(ins.stock) / Number(l.cantidad)) : null;
+          const opts = INSUMOS.map(i =>
+            `<option value="${i.id}" ${i.id === l.insumo_id ? 'selected' : ''}>${esc(i.nombre)}</option>`).join('');
+          return `<div class="line">
+              <select onchange="setLineInsumo(${idx}, this.value)">
+                <option value="">— elegir insumo —</option>${opts}
+              </select>
+              <input type="number" min="0" step="any" value="${l.cantidad}" onchange="setLineCant(${idx}, this.value)" />
+              <span class="u">${ins ? esc(ins.unidad) : ''}</span>
+              <button class="del" onclick="delLine(${idx})" title="Quitar">
+                <svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+              </button>
+            </div>
+            ${ins ? `<div class="line-stock ${alcanza === 0 ? 'bad' : ''}">Hay ${ins.stock} ${esc(ins.unidad)} · alcanza para ${alcanza} plato(s)</div>` : ''}`;
+        }).join('');
+      }
+      // Rinde estimado con lo que hay en el editor
+      let min = Infinity;
+      edLines.forEach(l => {
+        const ins = insById(l.insumo_id);
+        if (ins && l.cantidad > 0) min = Math.min(min, Math.floor(Number(ins.stock) / Number(l.cantidad)));
+      });
+      document.getElementById('edRinde').innerHTML = Number.isFinite(min)
+        ? `Con el stock de hoy alcanza para <b>${Math.max(0, min)}</b>`
+        : '';
+    }
+
+    function addLine() { edLines.push({ insumo_id: 0, cantidad: 1 }); renderLines(); }
+    function delLine(i) { edLines.splice(i, 1); renderLines(); }
+    function setLineInsumo(i, val) { edLines[i].insumo_id = Number(val) || 0; renderLines(); }
+    function setLineCant(i, val) { edLines[i].cantidad = Number(val) || 0; renderLines(); }
+
+    async function saveReceta() {
+      if (!edProd) return;
+      const items = edLines.filter(l => l.insumo_id > 0 && l.cantidad > 0);
+      if (edLines.length && !items.length) { toast('Completa el insumo y la cantidad'); return; }
+      const ids = items.map(i => i.insumo_id);
+      if (new Set(ids).size !== ids.length) { toast('Hay un insumo repetido en la receta'); return; }
+      try {
+        const r = await fetch(`/recetas/${edProd.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ items }),
+        });
+        const d = await r.json();
+        if (!d.success) { toast('❌ ' + (d.error || 'No se pudo guardar')); return; }
+        toast(items.length ? `Receta de ${edProd.nombre} guardada` : `${edProd.nombre} ya no descuenta inventario`);
+        closeEditor();
+        await loadAll();
+      } catch { toast('❌ Error de conexión'); }
+    }
+
+    document.getElementById('edModal').addEventListener('click', e => {
+      if (e.target.id === 'edModal') closeEditor();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEditor(); });
+
+    boot();
+  </script>
+</body>
+</html>
