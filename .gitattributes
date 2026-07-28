@@ -1,0 +1,22 @@
+# Fin de línea — todo el equipo trabaja en Windows.
+# En el repositorio los archivos de texto se guardan siempre con LF;
+# en el disco se escriben con CRLF. Así el diff no depende de la
+# configuración (core.autocrlf) que tenga cada quien en su máquina.
+* text=auto eol=crlf
+
+# Los scripts de shell rompen en Linux si llevan CRLF (por si algún día
+# esto se despliega en un servidor).
+*.sh text eol=lf
+
+# Binarios: Git no debe tocarlos ni intentar hacerles diff.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.mp4  binary
+*.webm binary
+*.woff  binary
+*.woff2 binary
+*.xlsx binary
+*.pdf  binary
