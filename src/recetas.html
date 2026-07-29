@@ -109,6 +109,11 @@
     #toastBox { position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:0.5rem; align-items:center; }
     .toast { background:var(--ink); color:#fff; padding:0.7rem 1.2rem; border-radius:12px; font-size:0.88rem; font-weight:600; box-shadow:var(--shadow-lg); }
 
+    /* Embebida en el panel de admin (?embed=1): el admin ya pone su propia
+       barra y su menú lateral, así que aquí se oculta el header propio. */
+    body.embed header { display:none; }
+    body.embed .wrap { padding-top:1.1rem; }
+
     @media (max-width:600px) {
       .wrap { padding:1rem; }
       .grid { grid-template-columns:1fr; }
@@ -193,6 +198,10 @@
   <div id="toastBox"></div>
 
   <script>
+    // Embebida dentro del panel de admin: sin header propio.
+    const EMBED = new URLSearchParams(location.search).has('embed');
+    if (EMBED) document.body.classList.add('embed');
+
     // ── Acceso (mismo token que el resto del sistema) ──
     const AUTH_KEY = 'coraje_auth';
     const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } };
