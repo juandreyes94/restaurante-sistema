@@ -202,14 +202,7 @@
       <img src="logo.png" alt="Coraje" />
       <h1>Ingreso</h1>
       <p>Elige tu acceso e ingresa el código</p>
-      <div class="role-tabs">
-        <button class="role-tab" data-role="cocina" onclick="pickRole('cocina')">
-          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
-        <button class="role-tab active" data-role="mesero" onclick="pickRole('mesero')">
-          <svg class="i" viewBox="0 0 24 24"><path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg> Mesero</button>
-        <button class="role-tab" data-role="admin" onclick="pickRole('admin')">
-          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
-      </div>
+      <div class="role-tabs" id="roleTabs"></div>
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
       <div class="login-err" id="loginErr"></div>
@@ -303,22 +296,13 @@
 
   <div id="toastBox"></div>
 
+  <script src="auth.js"></script>
   <script>
     // Escapa texto de usuario/catálogo antes de inyectarlo con innerHTML
     function esc(v){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function fmtCOP(n){ return '$' + Number(n||0).toLocaleString('es-CO'); }
 
-    // ── Acceso por PIN ──
-    const AUTH_KEY = 'coraje_auth';
-    function getAuth(){ try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } }
-    function authHeaders(){ const a = getAuth(); return a?.token ? { 'x-auth-token': a.token } : {}; }
-    const PAGE_ROLE = 'mesero';
-    let selRole = 'mesero';
-    function pickRole(r){
-      selRole = r;
-      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
-      document.getElementById('pinInput').focus();
-    }
+    // ── Acceso — login, enrutado por rol y sesión viven en auth.js ──
     let _started = false;
     function startApp(){
       if (_started) return; _started = true;
@@ -327,32 +311,6 @@
       loadProductos();
       connectWS();
     }
-    function routeTo(role){
-      if (role === PAGE_ROLE) startApp();
-      else location.href = role === 'admin' ? 'admin.html' : 'comanda.html';
-    }
-    function boot(){
-      const a = getAuth();
-      if (a && a.token && a.role === 'mesero') startApp();
-      else { document.getElementById('loginOverlay').style.display = 'flex'; setTimeout(() => document.getElementById('pinInput').focus(), 100); }
-    }
-    async function doLogin(){
-      const input = document.getElementById('pinInput'), err = document.getElementById('loginErr');
-      err.textContent = '';
-      try {
-        const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ pin: input.value.trim() }) });
-        const data = await res.json();
-        if (!data.ok) throw new Error('Código incorrecto');
-        const nombres = { admin:'Administrador', cocina:'Cocina', mesero:'Mesero' };
-        if (data.role !== selRole) throw new Error(`Ese código no es de ${nombres[selRole] || selRole}`);
-        localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
-        routeTo(data.role);
-      } catch (e) {
-        input.classList.add('err'); err.textContent = e.message || 'Código incorrecto';
-        input.value = ''; input.focus(); setTimeout(() => input.classList.remove('err'), 400);
-      }
-    }
-    function logout(){ localStorage.removeItem(AUTH_KEY); location.reload(); }
 
     // ── Estado ──
     let PRODUCTS = [];         // catálogo disponible
@@ -706,7 +664,7 @@
       setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
     }
 
-    boot();
+    initAuth({ roles:['mesero','admin'], defaultRole:'mesero', onStart:startApp });
   </script>
 </body>
 </html>

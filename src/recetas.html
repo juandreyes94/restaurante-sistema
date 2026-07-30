@@ -130,12 +130,7 @@
       <img src="logo.png" alt="Coraje" />
       <h1>Recetas</h1>
       <p>Elige tu acceso e ingresa el código</p>
-      <div class="role-tabs">
-        <button class="role-tab active" data-role="cocina" onclick="pickRole('cocina')">
-          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
-        <button class="role-tab" data-role="admin" onclick="pickRole('admin')">
-          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
-      </div>
+      <div class="role-tabs" id="roleTabs"></div>
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off"
              placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
@@ -197,43 +192,13 @@
 
   <div id="toastBox"></div>
 
+  <script src="auth.js"></script>
   <script>
     // Embebida dentro del panel de admin: sin header propio.
     const EMBED = new URLSearchParams(location.search).has('embed');
     if (EMBED) document.body.classList.add('embed');
 
     // ── Acceso (mismo token que el resto del sistema) ──
-    const AUTH_KEY = 'coraje_auth';
-    const getAuth = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } };
-    const authHeaders = () => { const a = getAuth(); return a?.token ? { 'x-auth-token': a.token } : {}; };
-    let selRole = 'cocina';
-
-    function pickRole(r) {
-      selRole = r;
-      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
-      document.getElementById('pinInput').focus();
-    }
-    function boot() {
-      const a = getAuth();
-      if (a && a.token && (a.role === 'cocina' || a.role === 'admin')) start();
-      else { document.getElementById('loginOverlay').style.display = 'flex'; setTimeout(() => document.getElementById('pinInput').focus(), 100); }
-    }
-    async function doLogin() {
-      const input = document.getElementById('pinInput'), err = document.getElementById('loginErr');
-      err.textContent = '';
-      try {
-        const res = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin: input.value.trim() }) });
-        const data = await res.json();
-        if (!data.ok) throw new Error('Código incorrecto');
-        if (data.role !== selRole) throw new Error(`Ese código no es de ${selRole === 'admin' ? 'Administrador' : 'Cocina'}`);
-        localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
-        start();
-      } catch (e) {
-        input.classList.add('err'); err.textContent = e.message || 'Código incorrecto';
-        input.value = ''; input.focus(); setTimeout(() => input.classList.remove('err'), 400);
-      }
-    }
-    function logout() { localStorage.removeItem(AUTH_KEY); location.reload(); }
 
     function start() {
       document.getElementById('loginOverlay').style.display = 'none';
@@ -256,11 +221,15 @@
 
     async function loadAll() {
       try {
-        const [p, i, r] = await Promise.all([
-          fetch('/productos').then(r => r.json()),
-          fetch('/insumos',  { headers: authHeaders() }).then(r => r.json()),
-          fetch('/recetas',  { headers: authHeaders() }).then(r => r.json()),
+        const [rp, ri, rr] = await Promise.all([
+          fetch('/productos'),
+          fetch('/insumos', { headers: authHeaders() }),
+          fetch('/recetas', { headers: authHeaders() }),
         ]);
+        // El servidor guarda los tokens en memoria: si se reinició, el que tenemos
+        // ya no vale y la API devuelve 403. Antes esto se veía como "no hay platos".
+        if (sesionExpirada(ri) || sesionExpirada(rr)) return;
+        const [p, i, r] = await Promise.all([rp.json(), ri.json(), rr.json()]);
         PRODUCTOS = Array.isArray(p) ? p : [];
         INSUMOS   = (Array.isArray(i) ? i : []).filter(x => x.activo !== false)
                       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
@@ -298,9 +267,10 @@
       const q = (document.getElementById('q').value || '').trim().toLowerCase();
       const sinReceta = PRODUCTOS.filter(p => !recetaDe(p.id).length);
 
+      // El texto va en un <span>: el .banner es flex y su gap separaría cada nodo.
       document.getElementById('banner').innerHTML = sinReceta.length
-        ? `<div class="banner bad">⚠️ ${sinReceta.length} plato(s) sin receta — al venderlos <u>no se descuenta nada</u> del inventario.</div>`
-        : `<div class="banner good">✅ Todos los platos tienen receta: el inventario se descuenta solo.</div>`;
+        ? `<div class="banner bad">⚠️<span>${sinReceta.length} plato(s) sin receta — al venderlos <u>no se descuenta nada</u> del inventario.</span></div>`
+        : `<div class="banner good">✅<span>Todos los platos tienen receta: el inventario se descuenta solo.</span></div>`;
 
       let lista = PRODUCTOS.slice();
       if (filtro === '__sin') lista = lista.filter(p => !recetaDe(p.id).length);
@@ -424,7 +394,7 @@
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEditor(); });
 
-    boot();
+    initAuth({ roles:['cocina','admin'], defaultRole:'cocina', onStart:start });
   </script>
 </body>
 </html>
