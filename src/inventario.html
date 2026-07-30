@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario — Coraje</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --red:#FB3E2C; --red-dark:#d62b1a; --green:#16a34a; --green-dark:#15803d;
+      --amber:#f59e0b;
+      --bg:#f5f2ee; --surface:#ffffff; --surface-2:#f7f8fa;
+      --ink:#1f2430; --ink-soft:#6b7280; --border:#e4e7ec; --muted:#9aa1ac;
+      --shadow:0 6px 20px rgba(23,29,41,0.08); --shadow-lg:0 14px 40px rgba(23,29,41,0.14);
+    }
+    html { font-size:16px; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+    .i { width:1.2em; height:1.2em; display:inline-block; vertical-align:-0.22em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+    /* ── Login ── */
+    .login-overlay { position:fixed; inset:0; z-index:200; background:linear-gradient(140deg,var(--red),var(--red-dark)); display:none; align-items:center; justify-content:center; padding:1.5rem; }
+    .login-card { background:var(--surface); border-radius:20px; box-shadow:var(--shadow-lg); width:100%; max-width:360px; padding:2rem 1.75rem; text-align:center; animation:slideIn 0.4s ease both; }
+    .login-card img { height:2.4rem; width:auto; margin-bottom:0.6rem; }
+    .login-card h1 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.06em; }
+    .login-card p { color:var(--ink-soft); font-size:0.85rem; margin-top:0.2rem; }
+    .role-tabs { display:flex; gap:0.4rem; margin-top:1.1rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
+    .role-tab { flex:1; padding:0.55rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:0.4rem; }
+    .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+    .role-tab .i { width:1.1em; height:1.1em; }
+    .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; transition:border-color 0.2s; }
+    .pin-input:focus { border-color:var(--red); }
+    .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+    @keyframes slideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+    .login-btn { width:100%; margin-top:1rem; padding:0.85rem; background:var(--red); color:#fff; border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.08em; cursor:pointer; transition:background 0.2s; }
+    .login-btn:hover { background:var(--red-dark); }
+    .login-err { color:var(--red); font-size:0.82rem; margin-top:0.7rem; min-height:1.1rem; font-weight:600; }
+
+    /* ── Header ── */
+    header { background:linear-gradient(135deg,var(--red),var(--red-dark)); color:#fff; padding:1rem 1.4rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; box-shadow:0 4px 18px rgba(214,43,26,0.25); position:sticky; top:0; z-index:30; }
+    header img { height:2.1rem; width:auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+    .logo-tag { font-family:'Bebas Neue',sans-serif; font-size:1.35rem; letter-spacing:0.1em; line-height:1; }
+    .sub { font-size:0.74rem; opacity:0.9; }
+    .head-actions { margin-left:auto; display:flex; gap:0.5rem; align-items:center; }
+    .ghost-btn { background:rgba(0,0,0,0.22); color:#fff; border:none; border-radius:10px; padding:0.5rem 0.8rem; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.8rem; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; transition:background 0.15s; }
+    .ghost-btn:hover { background:rgba(0,0,0,0.36); }
+
+    /* ── Contenido ── */
+    .wrap { padding:1.4rem; max-width:1180px; margin:0 auto; }
+    .toolbar { display:flex; gap:0.7rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .search { flex:1; min-width:200px; display:flex; align-items:center; gap:0.5rem; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0.6rem 0.85rem; box-shadow:var(--shadow); }
+    .search input { flex:1; border:none; outline:none; font-family:inherit; font-size:0.92rem; color:var(--ink); background:transparent; }
+    .btn { display:inline-flex; align-items:center; gap:0.45rem; padding:0.6rem 1rem; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--ink); box-shadow:var(--shadow); transition:transform 0.15s; }
+    .btn:hover { transform:translateY(-1px); }
+    .btn.primary { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 4px 14px rgba(251,62,44,0.35); }
+    .btn.primary:hover { background:var(--red-dark); }
+
+    .banner { display:flex; align-items:center; gap:0.6rem; padding:0.85rem 1rem; border-radius:12px; margin-bottom:1.1rem; font-size:0.9rem; font-weight:600; }
+    .banner.bad { background:rgba(251,62,44,0.1); color:#b91c1c; }
+    .banner.good { background:rgba(22,163,74,0.1); color:var(--green-dark); }
+    .banner.info { background:rgba(37,99,235,0.08); color:#1d4ed8; }
+
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); }
+    .inv-table { width:100%; border-collapse:collapse; font-size:0.92rem; }
+    .inv-table th { text-align:left; padding:0.7rem 1rem; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); border-bottom:1px solid var(--border); }
+    .inv-table td { padding:0.7rem 1rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .inv-table tr:last-child td { border-bottom:none; }
+    .inv-table tr.inv-low { background:rgba(220,38,38,0.05); }
+    .inv-stock { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:0.02em; }
+    .inv-stock.bad { color:#dc2626; }
+    .inv-actions { text-align:right; white-space:nowrap; }
+    .mini { border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:9px; padding:0.35rem 0.7rem; font-family:inherit; font-size:0.78rem; font-weight:700; cursor:pointer; margin-left:0.35rem; }
+    .mini:hover { border-color:var(--red); color:var(--red); }
+    .mini.on { background:rgba(22,163,74,0.1); border-color:transparent; color:var(--green-dark); }
+    .empty-note { text-align:center; color:var(--ink-soft); font-size:0.9rem; padding:1.6rem; }
+
+    /* ── Modales ── */
+    .modal-overlay { position:fixed; inset:0; z-index:150; background:rgba(23,29,41,0.45); display:none; align-items:center; justify-content:center; padding:1.5rem; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg); width:100%; max-width:400px; padding:1.5rem; animation:slideIn 0.2s ease; }
+    .modal h3 { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.03em; margin-bottom:1rem; }
+    .modal label { display:block; font-size:0.8rem; font-weight:600; color:var(--ink-soft); margin-bottom:0.9rem; }
+    .modal label input { width:100%; margin-top:0.3rem; padding:0.6rem 0.7rem; border:1px solid var(--border); border-radius:10px; font-size:0.9rem; font-family:inherit; color:var(--ink); background:var(--surface-2); outline:none; }
+    .modal label input:focus { border-color:var(--red); }
+    .modal-actions { display:flex; justify-content:flex-end; gap:0.6rem; margin-top:0.3rem; }
+    .muted { color:var(--ink-soft); }
+
+    #toastBox { position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:0.5rem; align-items:center; }
+    .toast { background:var(--ink); color:#fff; padding:0.7rem 1.2rem; border-radius:12px; font-size:0.88rem; font-weight:600; box-shadow:var(--shadow-lg); }
+
+    /* Embebida en el panel de admin (?embed=1) */
+    body.embed header { display:none; }
+    body.embed .wrap { padding-top:1.1rem; }
+
+    @media (max-width:600px) { .wrap { padding:1rem; } }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <img src="logo.png" alt="Coraje" />
+      <h1>Inventario</h1>
+      <p>Elige tu acceso e ingresa el código</p>
+      <div class="role-tabs" id="roleTabs"></div>
+      <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off"
+             placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
+      <button class="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <div id="app" style="display:none">
+    <header>
+      <img src="logo.png" alt="Coraje" />
+      <div>
+        <div class="logo-tag">Inventario</div>
+        <div class="sub">Cuánto hay de cada insumo</div>
+      </div>
+      <div class="head-actions">
+        <a class="ghost-btn" href="recetas.html">
+          <svg class="i" viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>
+          Recetas
+        </a>
+        <a class="ghost-btn" href="comanda.html">
+          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg>
+          Comandas
+        </a>
+        <button class="ghost-btn" onclick="logout()">Salir</button>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="toolbar">
+        <div class="search">
+          <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="q" placeholder="Buscar insumo..." oninput="render()" />
+        </div>
+        <button class="btn primary" id="btnNuevo" onclick="openInsumo()" style="display:none">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Nuevo insumo
+        </button>
+      </div>
+      <div id="rolNota"></div>
+      <div id="alerta"></div>
+      <div id="lista"></div>
+    </div>
+  </div>
+
+  <!-- MODAL INSUMO (solo admin) -->
+  <div class="modal-overlay" id="insumoModal">
+    <div class="modal">
+      <h3 id="insModalTitle">Nuevo insumo</h3>
+      <label>Nombre<input type="text" id="iNombre" placeholder="Ej. Carne" /></label>
+      <label>¿De qué tamaño es el paquete?<input type="text" id="iUnidad" placeholder="paquete 100 g" /></label>
+      <p class="muted" style="font-size:0.79rem;margin:-0.6rem 0 0.9rem;line-height:1.5">
+        Define el paquete del tamaño que gasta <b>un plato</b>. Así, al armar la receta,
+        el plato consume <b>1 paquete</b> y no hay que pensar en gramos.
+      </p>
+      <label id="iStockRow">¿Cuántos paquetes hay?<input type="number" id="iStock" min="0" step="any" placeholder="0" /></label>
+      <label>Avisar cuando queden menos de<input type="number" id="iMin" min="0" step="any" placeholder="0" /></label>
+      <p class="muted" style="font-size:0.8rem;margin:0.2rem 0 0">El stock sube con “+ Entrada” y baja solo al vender. Aquí solo se ajusta el mínimo.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeInsumo()">Cancelar</button>
+        <button class="btn primary" onclick="saveInsumo()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ENTRADA (solo admin) -->
+  <div class="modal-overlay" id="entradaModal">
+    <div class="modal">
+      <h3 id="entTitle">Entrada de stock</h3>
+      <p class="muted" id="entStock" style="font-size:0.85rem;margin:0 0 0.6rem"></p>
+      <label>¿Cuántos paquetes entraron?<input type="number" id="entCantidad" min="0" step="any"
+             placeholder="Ej. 20" oninput="calcEquiv()" onkeydown="if(event.key==='Enter')saveEntrada()" /></label>
+      <p class="muted" id="entEquiv" style="font-size:0.8rem;margin:-0.5rem 0 0.9rem"></p>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeEntrada()">Cancelar</button>
+        <button class="btn primary" onclick="saveEntrada()">Registrar entrada</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastBox"></div>
+
+  <script src="auth.js"></script>
+  <script>
+    const EMBED = new URLSearchParams(location.search).has('embed');
+    if (EMBED) document.body.classList.add('embed');
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    function toast(msg) {
+      const box = document.getElementById('toastBox');
+      const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; box.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    let INSUMOS = [];
+    let ES_ADMIN = false;   // cocina ve el inventario, pero no lo modifica
+
+    function start() {
+      ES_ADMIN = getAuth()?.role === 'admin';
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('btnNuevo').style.display = ES_ADMIN ? 'inline-flex' : 'none';
+      // El texto va dentro de un <span>: el .banner es flex y su gap separaría
+      // cada nodo (el <b> quedaba con espacios raros a los lados).
+      document.getElementById('rolNota').innerHTML = ES_ADMIN ? '' :
+        `<div class="banner info">👁️<span>Estás viendo el inventario como <b>cocina</b>: puedes consultarlo, pero registrar entradas y crear insumos es del administrador.</span></div>`;
+      load();
+    }
+
+    async function load() {
+      try {
+        const r = await fetch('/insumos', { headers: authHeaders() });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        INSUMOS = Array.isArray(d) ? d : [];
+      } catch { INSUMOS = []; toast('❌ No pude cargar el inventario'); }
+      render();
+    }
+
+    function render() {
+      const q = (document.getElementById('q').value || '').toLowerCase();
+      const bajos = INSUMOS.filter(i => Number(i.stock) <= Number(i.stock_min));
+      document.getElementById('alerta').innerHTML = bajos.length
+        ? `<div class="banner bad">⚠️ ${bajos.length} insumo(s) en bajo stock: ${bajos.map(i => esc(i.nombre)).join(', ')}</div>`
+        : `<div class="banner good">✅ Todos los insumos por encima del mínimo.</div>`;
+
+      const list = INSUMOS.filter(i => !q || i.nombre.toLowerCase().includes(q) || (i.unidad || '').toLowerCase().includes(q));
+      const box = document.getElementById('lista');
+      if (!list.length) { box.innerHTML = `<div class="card"><div class="empty-note">No hay insumos que coincidan.</div></div>`; return; }
+      box.innerHTML = `<div class="card" style="overflow-x:auto">
+        <table class="inv-table">
+          <thead><tr><th>Insumo</th><th>Unidad</th><th>Stock</th><th>Mínimo</th><th></th></tr></thead>
+          <tbody>${list.map(fila).join('')}</tbody>
+        </table></div>`;
+    }
+
+    function fila(i) {
+      const bajo = Number(i.stock) <= Number(i.stock_min);
+      return `<tr class="${bajo ? 'inv-low' : ''}">
+        <td><b>${esc(i.nombre)}</b></td>
+        <td class="muted">${esc(i.unidad)}</td>
+        <td><span class="inv-stock ${bajo ? 'bad' : ''}">${i.stock}</span></td>
+        <td class="muted">${i.stock_min}</td>
+        <td class="inv-actions">${ES_ADMIN ? `
+          <button class="mini on" onclick="entradaInsumo(${i.id})">+ Entrada</button>
+          <button class="mini" onclick="openInsumo(${i.id})">Editar</button>` : ''}
+        </td></tr>`;
+    }
+
+    // ── Entrada de stock (admin) ──
+    let _entradaId = null;
+
+    // El insumo se cuenta por paquetes ("paquete 25 g"), pero se compra por kilos.
+    // De la etiqueta sacamos el tamaño para mostrar la equivalencia al reponer.
+    function tamPaquete(unidad) {
+      const m = /paquete\s+([\d.]+)\s*(g|u)/i.exec(unidad || '');
+      return m ? { size: parseFloat(m[1]), base: m[2].toLowerCase() } : null;
+    }
+    function calcEquiv() {
+      const ins = INSUMOS.find(x => x.id === _entradaId);
+      const n = Number(document.getElementById('entCantidad').value);
+      const t = ins && tamPaquete(ins.unidad);
+      const box = document.getElementById('entEquiv');
+      if (!t || !(n > 0)) { box.textContent = ''; return; }
+      const total = n * t.size;
+      box.textContent = t.base === 'g'
+        ? `= ${total.toLocaleString('es-CO')} g${total >= 1000 ? ` (${(total / 1000).toLocaleString('es-CO')} kg)` : ''} en total`
+        : `= ${total.toLocaleString('es-CO')} unidades en total`;
+    }
+
+    function entradaInsumo(id) {
+      const ins = INSUMOS.find(x => x.id === id); if (!ins) return;
+      _entradaId = id;
+      const t = tamPaquete(ins.unidad);
+      document.getElementById('entTitle').textContent = `Entrada de stock — ${ins.nombre}`;
+      document.getElementById('entStock').innerHTML =
+        `Hay <b>${ins.stock}</b> × ${esc(ins.unidad)}` +
+        (t ? `<br/><span style="font-size:0.78rem">Si compraste por peso, divide entre ${t.size} ${t.base === 'g' ? 'g' : 'u'} para saber cuántos paquetes son.</span>` : '');
+      document.getElementById('entCantidad').value = '';
+      document.getElementById('entEquiv').textContent = '';
+      document.getElementById('entradaModal').classList.add('open');
+      setTimeout(() => document.getElementById('entCantidad').focus(), 50);
+    }
+    function closeEntrada() { document.getElementById('entradaModal').classList.remove('open'); }
+    async function saveEntrada() {
+      const ins = INSUMOS.find(x => x.id === _entradaId);
+      const cantidad = Number(document.getElementById('entCantidad').value);
+      if (!(cantidad > 0)) { toast('Indica cuánto entró'); return; }
+      try {
+        const r = await fetch(`/insumos/${_entradaId}/entrada`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ cantidad }) });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        if (d.success) { toast(`+${cantidad} · ${ins?.nombre} → ${d.stock}`); closeEntrada(); load(); }
+        else toast('❌ ' + (d.error || 'Error'));
+      } catch { toast('❌ Error de conexión'); }
+    }
+
+    // ── Crear / editar insumo (admin) ──
+    let _editId = null;
+    function openInsumo(id) {
+      const i = id ? INSUMOS.find(x => x.id === id) : null;
+      _editId = id || null;
+      document.getElementById('insModalTitle').textContent = i ? 'Editar insumo' : 'Nuevo insumo';
+      document.getElementById('iNombre').value = i ? i.nombre : '';
+      document.getElementById('iUnidad').value = i ? i.unidad : 'unidad';
+      document.getElementById('iStock').value = i ? i.stock : 0;
+      document.getElementById('iMin').value = i ? i.stock_min : 0;
+      document.getElementById('iStockRow').style.display = i ? 'none' : 'block';
+      document.getElementById('insumoModal').classList.add('open');
+      setTimeout(() => document.getElementById('iNombre').focus(), 50);
+    }
+    function closeInsumo() { document.getElementById('insumoModal').classList.remove('open'); }
+    async function saveInsumo() {
+      const body = {
+        nombre: document.getElementById('iNombre').value.trim(),
+        unidad: document.getElementById('iUnidad').value.trim() || 'unidad',
+        stock_min: Number(document.getElementById('iMin').value) || 0,
+      };
+      if (!body.nombre) { toast('El nombre es obligatorio'); return; }
+      try {
+        let r;
+        if (_editId) {
+          r = await fetch(`/insumos/${_editId}`, { method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(body) });
+        } else {
+          body.stock = Number(document.getElementById('iStock').value) || 0;
+          r = await fetch('/insumos', { method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(body) });
+        }
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        if (d.success) { toast('Insumo guardado'); closeInsumo(); load(); }
+        else toast('❌ ' + (d.error || 'Error'));
+      } catch { toast('❌ Error de conexión'); }
+    }
+
+    document.querySelectorAll('.modal-overlay').forEach(o =>
+      o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(o => o.classList.remove('open'));
+    });
+
+    initAuth({ roles:['cocina','admin'], defaultRole:'cocina', onStart:start });
+  </script>
+</body>
+</html>

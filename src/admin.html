@@ -79,7 +79,9 @@
     /* Recetas va embebida: ocupa el alto que sobra bajo la barra, sin scroll doble. */
     #p-recetas { padding:0; }
     #p-recetas.active { flex:1; min-height:0; }
-    #recetasFrame { width:100%; height:100%; border:none; display:block; background:var(--bg); }
+    #p-inventario { padding:0; }
+    #p-inventario.active { flex:1; min-height:0; }
+    #recetasFrame, #inventarioFrame { width:100%; height:100%; border:none; display:block; background:var(--bg); }
     @keyframes fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 
     /* ── Tarjetas de estadística ── */
@@ -218,6 +220,21 @@
     .modal label input:focus { border-color:var(--red); }
     .modal label.chk { display:flex; align-items:center; gap:0.5rem; }
     .modal-actions { display:flex; justify-content:flex-end; gap:0.6rem; margin-top:0.3rem; }
+    /* ── Foto del producto ── */
+    .foto-box { position:relative; width:100%; aspect-ratio:16/10; border:2px dashed var(--border); border-radius:14px;
+      background:var(--surface-2); overflow:hidden; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:border-color 0.2s; }
+    .foto-box:hover { border-color:var(--red); }
+    .foto-box img { width:100%; height:100%; object-fit:cover; display:none; }
+    .foto-box.con-foto img { display:block; }
+    .foto-box.con-foto .foto-vacia { display:none; }
+    .foto-vacia { display:flex; flex-direction:column; align-items:center; gap:0.25rem; color:var(--muted); text-align:center; padding:1rem; }
+    .foto-vacia b { font-size:0.88rem; color:var(--ink-soft); }
+    .foto-vacia span { font-size:0.72rem; line-height:1.4; }
+    .foto-cargando { position:absolute; inset:0; background:rgba(255,255,255,0.88); display:none;
+      align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; color:var(--red); }
+    .foto-box.subiendo .foto-cargando { display:flex; }
+    .foto-acciones { display:flex; gap:0.4rem; flex-wrap:wrap; margin:0.6rem 0 0.9rem; }
 
     /* Toast */
     .toast { position:fixed; top:1.2rem; right:1.2rem; z-index:160; background:var(--ink); color:#fff; padding:0.8rem 1.2rem; border-radius:12px; font-weight:600; font-size:0.88rem; box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:0.5rem; animation:fade 0.25s ease; }
@@ -240,12 +257,7 @@
       <img src="logo.png" alt="Coraje" />
       <h1>Ingreso</h1>
       <p>Elige tu acceso e ingresa el código</p>
-      <div class="role-tabs">
-        <button class="role-tab" data-role="cocina" onclick="pickRole('cocina')">
-          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
-        <button class="role-tab active" data-role="admin" onclick="pickRole('admin')">
-          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
-      </div>
+      <div class="role-tabs" id="roleTabs"></div>
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
       <div class="login-err" id="loginErr"></div>
@@ -354,30 +366,9 @@
         <div id="productosBox"></div>
       </section>
 
-      <!-- INVENTARIO -->
+      <!-- INVENTARIO — se embebe inventario.html (la misma que usa cocina) -->
       <section class="panel" id="p-inventario">
-        <style>
-          .inv-table{width:100%;border-collapse:collapse;font-size:0.92rem}
-          .inv-table th{text-align:left;padding:0.7rem 1rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border)}
-          .inv-table td{padding:0.7rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle}
-          .inv-table tr:last-child td{border-bottom:none}
-          .inv-table tr.inv-low{background:rgba(220,38,38,0.05)}
-          .inv-stock{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:0.02em}
-          .inv-stock.bad{color:#dc2626}
-          .inv-actions{text-align:right;white-space:nowrap}
-          .inv-banner{display:flex;align-items:center;gap:0.5rem;padding:0.8rem 1rem;border-radius:12px;margin-bottom:1rem;font-size:0.9rem;font-weight:600}
-        </style>
-        <div style="display:flex;gap:0.7rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center">
-          <div class="search" style="margin:0;flex:1;min-width:180px">
-            <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" id="searchInsumos" placeholder="Buscar insumo..." oninput="renderInventario()" />
-          </div>
-          <button class="btn primary" onclick="openInsumo()">
-            <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Nuevo insumo
-          </button>
-        </div>
-        <div id="invAlert"></div>
-        <div id="insumosBox"></div>
+        <iframe id="inventarioFrame" title="Inventario"></iframe>
       </section>
 
       <!-- RECETAS — se embebe recetas.html para no duplicar el código.
@@ -434,7 +425,23 @@
       <datalist id="catList"></datalist>
       <label>Precio (COP)<input type="number" id="fPrecio" min="0" step="500" placeholder="18000" /></label>
       <label>Precio combo (opcional)<input type="number" id="fCombo" min="0" step="500" placeholder="—" /></label>
-      <label>Imagen (ruta o URL)<input type="text" id="fImagen" placeholder="img/hamburguesa-coraje.jpg" /></label>
+      <label style="margin-bottom:0.5rem">Foto del producto</label>
+      <div class="foto-box" id="fotoBox" onclick="pickFoto()">
+        <img id="fotoPreview" alt="" />
+        <div class="foto-vacia" id="fotoVacia">
+          <svg class="i" viewBox="0 0 24 24" style="width:1.7rem;height:1.7rem"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 15l-5-5L5 19"/></svg>
+          <b>Subir una foto</b>
+          <span>Toca para elegirla del dispositivo · JPG, PNG o WEBP · máx 5 MB</span>
+        </div>
+        <div class="foto-cargando" id="fotoCargando">Subiendo…</div>
+      </div>
+      <div class="foto-acciones">
+        <button type="button" class="mini" onclick="pickFoto()">Cambiar foto</button>
+        <button type="button" class="mini" id="btnQuitarFoto" onclick="quitarFoto()" style="display:none">Quitar</button>
+        <button type="button" class="mini" onclick="toggleUrlManual()">Pegar una URL</button>
+      </div>
+      <input type="file" id="fFile" accept="image/jpeg,image/png,image/webp,image/avif" style="display:none" onchange="subirFoto(this)" />
+      <label id="urlManual" style="display:none;margin-top:0.7rem">Ruta o URL de la imagen<input type="text" id="fImagen" placeholder="https://… o img/foto.jpg" oninput="pintarPreview(this.value)" /></label>
       <label>Descripción / ingredientes<input type="text" id="fDescripcion" placeholder="Pan brioche, carne premium, queso..." /></label>
       <label class="chk"><input type="checkbox" id="fDisponible" checked /> Disponible</label>
       <div class="modal-actions">
@@ -444,38 +451,10 @@
     </div>
   </div>
 
-  <!-- MODAL INSUMO -->
-  <div class="modal-overlay" id="insumoModal">
-    <div class="modal">
-      <h3 id="insModalTitle">Nuevo insumo</h3>
-      <label>Nombre<input type="text" id="iNombre" placeholder="Ej. Pan brioche" /></label>
-      <label>Unidad / porción<input type="text" id="iUnidad" placeholder="unidad · porción 150g · bolsa" /></label>
-      <label id="iStockRow">Stock inicial<input type="number" id="iStock" min="0" step="1" placeholder="0" /></label>
-      <label>Alerta de bajo stock (mínimo)<input type="number" id="iMin" min="0" step="1" placeholder="0" /></label>
-      <p class="muted" style="font-size:0.8rem;margin:0.2rem 0 0">El stock sube con “+ Entrada” y baja solo al vender. Aquí solo se ajusta el mínimo.</p>
-      <div class="modal-actions">
-        <button class="btn" onclick="closeInsumo()">Cancelar</button>
-        <button class="btn primary" onclick="saveInsumo()">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL ENTRADA DE STOCK -->
-  <div class="modal-overlay" id="entradaModal">
-    <div class="modal">
-      <h3 id="entTitle">Entrada de stock</h3>
-      <p class="muted" id="entStock" style="font-size:0.85rem;margin:0 0 0.6rem"></p>
-      <label>Unidades que entraron<input type="number" id="entCantidad" min="1" step="1" placeholder="Ej. 20" onkeydown="if(event.key==='Enter')saveEntrada()" /></label>
-      <div class="modal-actions">
-        <button class="btn" onclick="closeEntrada()">Cancelar</button>
-        <button class="btn primary" onclick="saveEntrada()">Registrar entrada</button>
-      </div>
-    </div>
-  </div>
-
   <div class="chart-tip" id="chartTip"></div>
   <div id="toastBox"></div>
 
+  <script src="auth.js"></script>
   <script>
     // ── Configuración de navegación ──
     const NAV = [
@@ -512,10 +491,7 @@
         ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
     }
 
-    // ── Acceso ──
-    const AUTH_KEY='coraje_auth';
-    function getAuth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY))||null; }catch{ return null; } }
-    function authHeaders(){ const a=getAuth(); return a?.token?{'x-auth-token':a.token}:{}; }
+    // ── Acceso — el login, el enrutado por rol y la sesión viven en auth.js ──
     let _started=false;
     function startApp(){
       if(_started) return; _started=true;
@@ -523,35 +499,6 @@
       document.getElementById('app').style.display='flex';
       buildNav(); connect();
     }
-    const PAGE_ROLE='admin';
-    let selRole='admin';
-    function pickRole(r){
-      selRole=r;
-      document.querySelectorAll('.role-tab').forEach(t=>t.classList.toggle('active',t.dataset.role===r));
-      document.getElementById('pinInput').focus();
-    }
-    function boot(){
-      const a=getAuth();
-      if(a&&a.token&&a.role==='admin') startApp();
-      else { document.getElementById('loginOverlay').style.display='flex'; setTimeout(()=>document.getElementById('pinInput').focus(),100); }
-    }
-    function routeTo(role){
-      if(role===PAGE_ROLE) startApp();
-      else location.href = role==='admin' ? 'admin.html' : 'comanda.html';
-    }
-    async function doLogin(){
-      const input=document.getElementById('pinInput'), err=document.getElementById('loginErr');
-      err.textContent='';
-      try{
-        const res=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:input.value.trim()})});
-        const data=await res.json();
-        if(!data.ok) throw new Error('Código incorrecto');
-        if(data.role!==selRole) throw new Error(`Ese código no es de ${selRole==='admin'?'Administrador':'Cocina'}`);
-        localStorage.setItem(AUTH_KEY,JSON.stringify({role:data.role,token:data.token}));
-        routeTo(data.role);
-      }catch(e){ input.classList.add('err'); err.textContent=e.message||'Código incorrecto'; input.value=''; input.focus(); setTimeout(()=>input.classList.remove('err'),400); }
-    }
-    function logout(){ localStorage.removeItem(AUTH_KEY); location.reload(); }
 
     // ── Navegación ──
     function svg(paths){ return `<svg class="i" viewBox="0 0 24 24">${paths}</svg>`; }
@@ -835,6 +782,56 @@
           <button class="mini danger" onclick="delProducto(${p.id})">Eliminar</button>
         </div></div>`;
     }
+    // ── Foto del producto: se sube al bucket de Supabase y se guarda su URL ──
+    function pickFoto(){ document.getElementById('fFile').click(); }
+
+    function pintarPreview(url){
+      const box = document.getElementById('fotoBox');
+      const img = document.getElementById('fotoPreview');
+      const hay = !!(url || '').trim();
+      box.classList.toggle('con-foto', hay);
+      document.getElementById('btnQuitarFoto').style.display = hay ? 'inline-block' : 'none';
+      if (hay) { img.src = url; img.onerror = () => { box.classList.remove('con-foto'); toast('No se pudo mostrar esa imagen'); }; }
+      else img.removeAttribute('src');
+    }
+
+    function quitarFoto(){
+      document.getElementById('fImagen').value = '';
+      document.getElementById('fFile').value = '';
+      pintarPreview('');
+    }
+
+    function toggleUrlManual(){
+      const l = document.getElementById('urlManual');
+      l.style.display = l.style.display === 'none' ? 'block' : 'none';
+      if (l.style.display === 'block') document.getElementById('fImagen').focus();
+    }
+
+    async function subirFoto(input){
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024){ toast('La foto pesa más de 5 MB'); input.value=''; return; }
+
+      // Vista previa inmediata desde el archivo local, sin esperar al servidor
+      const local = URL.createObjectURL(file);
+      pintarPreview(local);
+
+      const box = document.getElementById('fotoBox');
+      box.classList.add('subiendo');
+      try {
+        const fd = new FormData();
+        fd.append('imagen', file);
+        const r = await fetch('/upload', { method:'POST', headers: authHeaders(), body: fd });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        if (!d.success){ toast('❌ ' + (d.error || 'No se pudo subir')); pintarPreview(document.getElementById('fImagen').value); return; }
+        document.getElementById('fImagen').value = d.url;
+        pintarPreview(d.url);
+        toast('Foto subida ✓');
+      } catch { toast('❌ Error de conexión al subir la foto'); pintarPreview(document.getElementById('fImagen').value); }
+      finally { box.classList.remove('subiendo'); URL.revokeObjectURL(local); input.value=''; }
+    }
+
     function openProducto(id){
       const p = id ? _productos.find(x => x.id === id) : null;
       _editId = id || null;
@@ -844,6 +841,9 @@
       document.getElementById('fPrecio').value = p ? p.precio : '';
       document.getElementById('fCombo').value = p && p.precioCombo ? p.precioCombo : '';
       document.getElementById('fImagen').value = p ? (p.imagen||'') : '';
+      document.getElementById('fFile').value = '';
+      document.getElementById('urlManual').style.display = 'none';
+      pintarPreview(p ? (p.imagen||'') : '');
       document.getElementById('fDescripcion').value = p ? (p.descripcion||'') : '';
       document.getElementById('fDisponible').checked = p ? p.disponible : true;
       document.getElementById('prodModal').classList.add('open');
@@ -905,98 +905,14 @@
       else f.contentWindow?.location.reload();
     }
 
-    // ── Inventario ──
-    let _insumos = [];
-    let _insEditId = null;
-    async function loadInventario(){
-      try { const r = await fetch('/insumos', { headers: authHeaders() }); _insumos = await r.json(); }
-      catch { _insumos = []; }
-      renderInventario();
-    }
-    function renderInventario(){
-      const q = (document.getElementById('searchInsumos').value || '').toLowerCase();
-      const bajos = _insumos.filter(i => Number(i.stock) <= Number(i.stock_min));
-      document.getElementById('invAlert').innerHTML = bajos.length
-        ? `<div class="inv-banner" style="background:rgba(220,38,38,0.1);color:#b91c1c">⚠️ ${bajos.length} insumo(s) en bajo stock: ${bajos.map(i=>esc(i.nombre)).join(', ')}</div>`
-        : `<div class="inv-banner" style="background:rgba(22,163,74,0.1);color:#15803d">✅ Todos los insumos por encima del mínimo.</div>`;
-      const list = _insumos.filter(i => !q || i.nombre.toLowerCase().includes(q) || (i.unidad||'').toLowerCase().includes(q));
-      const box = document.getElementById('insumosBox');
-      if (!list.length){ box.innerHTML = `<div class="card"><div class="soon-box"><p>No hay insumos. Crea el primero con “+ Nuevo insumo”.</p></div></div>`; return; }
-      box.innerHTML = `<div class="card" style="padding:0;overflow-x:auto">
-        <table class="inv-table">
-          <thead><tr><th>Insumo</th><th>Unidad</th><th>Stock</th><th>Mínimo</th><th></th></tr></thead>
-          <tbody>${list.map(insRow).join('')}</tbody>
-        </table></div>`;
-    }
-    function insRow(i){
-      const bajo = Number(i.stock) <= Number(i.stock_min);
-      return `<tr class="${bajo?'inv-low':''}">
-        <td><b>${esc(i.nombre)}</b></td>
-        <td class="muted">${esc(i.unidad)}</td>
-        <td><span class="inv-stock ${bajo?'bad':''}">${i.stock}</span></td>
-        <td class="muted">${i.stock_min}</td>
-        <td class="inv-actions">
-          <button class="mini on" onclick="entradaInsumo(${i.id})">+ Entrada</button>
-          <button class="mini" onclick="openInsumo(${i.id})">Editar</button>
-        </td></tr>`;
-    }
-    let _entradaId = null;
-    function entradaInsumo(id){
-      const ins = _insumos.find(x => x.id === id); if (!ins) return;
-      _entradaId = id;
-      document.getElementById('entTitle').textContent = `Entrada de stock — ${ins.nombre}`;
-      document.getElementById('entStock').textContent = `Stock actual: ${ins.stock} ${ins.unidad}`;
-      document.getElementById('entCantidad').value = '';
-      document.getElementById('entradaModal').classList.add('open');
-      setTimeout(() => document.getElementById('entCantidad').focus(), 50);
-    }
-    function closeEntrada(){ document.getElementById('entradaModal').classList.remove('open'); }
-    async function saveEntrada(){
-      const ins = _insumos.find(x => x.id === _entradaId);
-      const cantidad = Number(document.getElementById('entCantidad').value);
-      if (!(cantidad > 0)){ toast('Indica cuántas unidades entraron'); return; }
-      try {
-        const r = await fetch(`/insumos/${_entradaId}/entrada`, { method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify({ cantidad }) });
-        const d = await r.json();
-        if (d.success){ toast(`+${cantidad} · ${ins?.nombre} → stock ${d.stock}`); closeEntrada(); loadInventario(); }
-        else toast('❌ ' + (d.error || 'Error'));
-      } catch { toast('❌ Error de conexión'); }
-    }
-    function openInsumo(id){
-      const i = id ? _insumos.find(x => x.id === id) : null;
-      _insEditId = id || null;
-      document.getElementById('insModalTitle').textContent = i ? 'Editar insumo' : 'Nuevo insumo';
-      document.getElementById('iNombre').value = i ? i.nombre : '';
-      document.getElementById('iUnidad').value = i ? i.unidad : 'unidad';
-      document.getElementById('iStock').value = i ? i.stock : 0;
-      document.getElementById('iMin').value = i ? i.stock_min : 0;
-      document.getElementById('iStockRow').style.display = i ? 'none' : 'block'; // el stock existente solo cambia con entradas/ventas
-      document.getElementById('insumoModal').classList.add('open');
-      setTimeout(() => document.getElementById('iNombre').focus(), 50);
-    }
-    function closeInsumo(){ document.getElementById('insumoModal').classList.remove('open'); }
-    async function saveInsumo(){
-      const body = {
-        nombre: document.getElementById('iNombre').value.trim(),
-        unidad: document.getElementById('iUnidad').value.trim() || 'unidad',
-        stock_min: Number(document.getElementById('iMin').value) || 0,
-      };
-      if (!body.nombre){ toast('El nombre es obligatorio'); return; }
-      try {
-        let r;
-        if (_insEditId){
-          r = await fetch(`/insumos/${_insEditId}`, { method:'PUT', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify(body) });
-        } else {
-          body.stock = Number(document.getElementById('iStock').value) || 0;
-          r = await fetch('/insumos', { method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify(body) });
-        }
-        const d = await r.json();
-        if (d.success){ toast('Insumo guardado'); closeInsumo(); loadInventario(); }
-        else toast('❌ ' + (d.error || 'Error'));
-      } catch { toast('❌ Error de conexión'); }
+    // ── Inventario (inventario.html embebido: mismo código que usa cocina) ──
+    function loadInventario(){
+      const f = document.getElementById('inventarioFrame');
+      if (!f.src) f.src = 'inventario.html?embed=1';
+      else f.contentWindow?.location.reload();
     }
 
-    boot();
+    initAuth({ roles:['admin'], defaultRole:'admin', onStart:startApp });
   </script>
 </body>
 </html>

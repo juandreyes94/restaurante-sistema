@@ -263,6 +263,29 @@ async function alertas() {
   return (data || []).filter(i => Number(i.stock) <= Number(i.stock_min));
 }
 
+// ── Imágenes de productos (Supabase Storage, bucket público "productos") ──
+// Ojo: `sharp` se quitó a propósito del proyecto (rompía en Linux) — no
+// re-agregarlo. El tamaño se limita en el endpoint con los límites de multer.
+const BUCKET_IMG = 'productos';
+
+async function uploadImagen(buffer, filename, mime) {
+  const ext = (filename.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase();
+  const base = filename.replace(/\.[^.]+$/, '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // sin tildes
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    .slice(0, 40) || 'imagen';
+  // Nombre único: si se vuelve a subir la misma foto no pisa la anterior
+  const path = `${base}-${Date.now().toString(36)}${ext}`;
+
+  const { error } = await supa.storage.from(BUCKET_IMG)
+    .upload(path, buffer, { contentType: mime, upsert: false });
+  if (error) throw error;
+
+  const { data } = supa.storage.from(BUCKET_IMG).getPublicUrl(path);
+  return { path, url: data.publicUrl };
+}
+
 // ── Recetas (qué insumos consume cada producto) ──
 async function recetas() {
   const { data, error } = await supa.from('recetas').select('producto_id,insumo_id,cantidad');
@@ -325,6 +348,8 @@ module.exports = {
   insumos, insumoAdd, insumoEntrada, insumoUpdate, movimientos, alertas,
   // Recetas
   recetas, recetaSet,
+  // Imágenes
+  uploadImagen,
   // Compatibilidad: el catálogo ahora vive en la BD, no se siembra desde el código
   ensureCatalog: () => {},
   save: () => {},

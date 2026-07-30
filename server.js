@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 const path = require('path');
@@ -112,6 +113,41 @@ app.put('/productos/:id', requireRole('admin'), async (req, res) => {
     const p = await store.productUpdate(id, fields);
     res.json({ success: true, product: p });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Subir foto de producto ──
+// En memoria (no toca disco) y de ahí a Supabase Storage. Sin `sharp`: se quitó
+// a propósito del proyecto porque rompía en Linux, así que el peso se acota aquí.
+const MIMES_OK = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+const subirImagen = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (MIMES_OK.includes(file.mimetype)) return cb(null, true);
+    cb(new Error('Formato no admitido. Usa JPG, PNG, WEBP o AVIF.'));
+  },
+}).single('imagen');
+
+app.post('/upload', requireRole('admin'), (req, res) => {
+  subirImagen(req, res, async (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'La imagen pesa más de 5 MB. Usa una más liviana.'
+        : err.message || 'No se pudo procesar la imagen';
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: 'No llegó ninguna imagen' });
+    try {
+      // multer entrega el nombre en latin1: sin esto "Piña.jpg" llega como "PiÃ±a.jpg"
+      // y el nombre del archivo en el bucket sale ilegible.
+      const nombre = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+      const { url, path: ruta } = await store.uploadImagen(
+        req.file.buffer, nombre, req.file.mimetype);
+      res.json({ success: true, url, path: ruta });
+    } catch (e) {
+      res.status(500).json({ error: e.message || 'No se pudo subir la imagen' });
+    }
+  });
 });
 
 app.delete('/productos/:id', requireRole('admin'), async (req, res) => {

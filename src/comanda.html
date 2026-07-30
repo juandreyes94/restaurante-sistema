@@ -490,6 +490,16 @@
       background: rgba(0,0,0,0.16); color: #fff; border: none; border-radius: 8px;
       font-size: 0.68rem; padding: 0.2rem 0.5rem; cursor: pointer; margin-top: 0.3rem;
     }
+    /* Accesos de cocina: recetas e inventario (lo que cocina puede tocar además del KDS) */
+    .cocina-nav { display: flex; gap: 0.35rem; align-items: center; }
+    .cocina-nav a {
+      background: rgba(0,0,0,0.16); color: #fff; text-decoration: none; border-radius: 9px;
+      font-size: 0.74rem; font-weight: 600; padding: 0.4rem 0.65rem; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.15s;
+    }
+    .cocina-nav a:hover { background: rgba(0,0,0,0.34); }
+    .cocina-nav .i { width: 1em; height: 1em; }
+    @media (max-width: 640px) { .cocina-nav a span { display: none; } }
 
     @media (max-width: 520px) {
       .toolbar { top: 62px; }
@@ -506,12 +516,7 @@
       <img src="logo.png" alt="Coraje" />
       <h1>Ingreso</h1>
       <p>Elige tu acceso e ingresa el código</p>
-      <div class="role-tabs">
-        <button class="role-tab active" data-role="cocina" onclick="pickRole('cocina')">
-          <svg class="i" viewBox="0 0 24 24"><path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/></svg> Cocina</button>
-        <button class="role-tab" data-role="admin" onclick="pickRole('admin')">
-          <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/></svg> Admin</button>
-      </div>
+      <div class="role-tabs" id="roleTabs"></div>
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric"
              autocomplete="off" placeholder="••••" maxlength="8"
              onkeydown="if(event.key==='Enter')doLogin()" />
@@ -534,6 +539,16 @@
       </div>
     </div>
     <div class="header-right">
+      <nav class="cocina-nav">
+        <a href="recetas.html" title="Recetas">
+          <svg class="i" viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 12h7M8 16h4"/></svg>
+          <span>Recetas</span>
+        </a>
+        <a href="inventario.html" title="Inventario">
+          <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
+          <span>Inventario</span>
+        </a>
+      </nav>
       <div class="pending-count">
         <span class="num" id="pendingCount">0</span>
         <span class="lbl">En<br>cocina</span>
@@ -606,6 +621,7 @@
     <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2tOPFF8r+nVkWE6PluCpbuUXjUnPmOYy+7Yk1A1OGCVv9jOklI4OVp/qbqJUi0jN1qOvNXNiU82PlZ8pbqAUCsiNVaKuNLIiEwzO1V3obd+TSkgMlSHuNDFhUkwOVR1n7V8TSchMFKEts/ChEYuNlJxnLN5SiYeMFCDs87AgEMsNFFvmbF2SCQcLk5/scj9hMszNUtnlq11RiIaLE18r8r8g8kxM0plk6tzRSAdKkl6rsn8gsYwMkhinrF3TCkfK0h5rMf7gcQvMUVgl61xTCggK0R1qcT6f8MuLkJdlKpvSR4cKkFypsL5f8AtLEBbkqdtRxwZKD9vosD4fb8rKz9ZkKVrRhsXJz1tnb73e70qKD1XjqNpRRoWJTtqm736e7spJztUi6BnRBkVJDhom7v6erkpJjhSiZ5lQxgUJDZlmLn5eHUoJDZQh5xkQhcTIjNimbj4d3MoIjNNhZpiQRYSITFhlrb3dXEoIDFLg5hgQBUSIDBelaH0c28nHi9JgJZfPxQRHy1clZn0cm0nHS5HfpVePxMQHipalJf0cWsnHC1FfJNdPhMQHS5Xk5T1cGsmGy1De5JcPhIPHS1WkZP1b2omGitCeZBbPREOHCtUkJL2bmkmGSlAd49aPRANGypSkJD2bWgmGCg+do5ZPRAMGilRj472bGcmFyc8dI1YPQ8LGShQjo32a2YmFiY7co1XPQ8LGCdPjYz2amYmFiU6cIxWPA4KFyZOjIv3aWUmFSQ5boxVPA4KFiVNi4v3aGUmFCQ4bYtUPQ0JFiVMiop3Z2QlFCM3bIpTPQ0JFSRMiIl3ZmQlEyM2a4lSPA0IFCNLiIl3ZWQlEyI1aohRPA0IFCNLh4h3ZGQkEiI1aocQPA0IFCJKhod3Y2MkEiE0aYcPPA4IFCJKhod3Y2MkEiE0aIYQPA4IFCFJhYd3YmMkEiA0aIYQPA4IFCFIhYd3YmMkEiA0aIYQPA4IFCFIhYd3YmMkEiA0aIYQ" type="audio/wav" />
   </audio>
 
+  <script src="auth.js"></script>
   <script>
     const orders = {};
     const history = {};   // pedidos completados (para control)
@@ -662,57 +678,12 @@
     const WARN_MIN = parseFloat(_p.get('warn')) || MAX_MIN / 3;   // fin fase verde
     const LATE_MIN = parseFloat(_p.get('late')) || MAX_MIN * 2/3; // fin fase naranja → rojo
 
-    // ── Acceso por PIN ──
-    const AUTH_KEY = 'coraje_auth';
-    function getAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; } }
-    function authHeaders() { const a = getAuth(); return a?.token ? { 'x-auth-token': a.token } : {}; }
-
+    // ── Acceso — login, enrutado por rol y sesión viven en auth.js ──
     let _started = false;
     function startApp() {
       if (_started) return; _started = true;
       document.getElementById('loginOverlay').style.display = 'none';
       connect();
-    }
-    const PAGE_ROLE = 'cocina';
-    let selRole = 'cocina';
-    function pickRole(r) {
-      selRole = r;
-      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
-      document.getElementById('pinInput').focus();
-    }
-    function boot() {
-      const a = getAuth();
-      if (a && a.token && (a.role === 'cocina' || a.role === 'admin')) {
-        startApp();
-      } else {
-        document.getElementById('loginOverlay').style.display = 'flex';
-        setTimeout(() => document.getElementById('pinInput').focus(), 100);
-      }
-    }
-    async function doLogin() {
-      const input = document.getElementById('pinInput');
-      const err = document.getElementById('loginErr');
-      err.textContent = '';
-      try {
-        const res = await fetch('/login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: input.value.trim() }),
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error('Código incorrecto');
-        if (data.role !== selRole) throw new Error(`Ese código no es de ${selRole === 'admin' ? 'Administrador' : 'Cocina'}`);
-        localStorage.setItem(AUTH_KEY, JSON.stringify({ role: data.role, token: data.token }));
-        if (selRole === 'admin') location.href = 'admin.html';
-        else startApp();
-      } catch (e) {
-        input.classList.add('err'); err.textContent = e.message || 'Código incorrecto';
-        input.value = ''; input.focus();
-        setTimeout(() => input.classList.remove('err'), 400);
-      }
-    }
-    function logout() {
-      localStorage.removeItem(AUTH_KEY);
-      location.reload();
     }
 
     function connect() {
@@ -1164,7 +1135,7 @@
       }
     }
 
-    boot();
+    initAuth({ roles:['cocina','admin'], defaultRole:'cocina', onStart:startApp });
   </script>
 
 </body>
