@@ -632,10 +632,11 @@
   </audio>
 
   <script src="auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+  <script src="realtime.js"></script>
   <script>
     const orders = {};
     const history = {};   // pedidos completados (para control)
-    let ws;
     let reconnectTimer;
 
     // Escapa texto de usuario antes de inyectarlo con innerHTML (seguro en texto y en atributos)
@@ -697,18 +698,22 @@
     }
 
     function connect() {
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}`);
-
-      ws.onopen = () => {
-        setStatus('connected', 'En línea');
-        document.getElementById('reconnectOverlay').style.display = 'none';
-        clearTimeout(reconnectTimer);
-      };
-
-      ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
+      RT.connect({
+        onOpen: () => {
+          setStatus('connected', 'En línea');
+          document.getElementById('reconnectOverlay').style.display = 'none';
+          clearTimeout(reconnectTimer);
+        },
+        onClose: () => {
+          // El reintento lo maneja el cliente de Supabase: aquí solo se avisa.
+          setStatus('error', 'Sin conexión');
+          document.getElementById('reconnectOverlay').style.display = 'flex';
+        },
+        onMessage: (msg) => {
         if (msg.type === 'init') {
+          // Llega al entrar y en cada reconexión: se parte de cero para no duplicar.
+          document.querySelectorAll('[id^="order-"]').forEach(el => el.remove());
+          for (const k in history) delete history[k];
           msg.orders.forEach(o => addOrder(o, false));
           (msg.completed || []).forEach(o => { history[o.id] = o; });
           renderHistory();
@@ -741,15 +746,8 @@
           for (const k in history) delete history[k];
           renderHistory();
         }
-      };
-
-      ws.onclose = () => {
-        setStatus('error', 'Sin conexión');
-        document.getElementById('reconnectOverlay').style.display = 'flex';
-        reconnectTimer = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = () => ws.close();
+        },
+      });
     }
 
     function setStatus(type, label) {

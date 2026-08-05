@@ -507,6 +507,8 @@
   <div id="toastBox"></div>
 
   <script src="auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+  <script src="realtime.js"></script>
   <script>
     // ── Configuración de navegación ──
     const NAV = [
@@ -535,7 +537,6 @@
     // ── Estado ──
     const activos = {};    // pendientes
     const historial = {};  // completados
-    let ws;
 
     // Escapa texto de usuario antes de inyectarlo con innerHTML (seguro en texto y en atributos)
     function esc(v) {
@@ -579,22 +580,21 @@
       document.getElementById('backdrop').classList.toggle('show',open);
     }
 
-    // ── WebSocket ──
+    // ── Estado en vivo (Supabase Realtime — ver realtime.js) ──
     function connect(){
-      const proto=location.protocol==='https:'?'wss':'ws';
-      ws=new WebSocket(`${proto}://${location.host}`);
-      ws.onmessage=(e)=>{
-        const m=JSON.parse(e.data);
-        if(m.type==='init'){ (m.orders||[]).forEach(o=>activos[o.id]=o); (m.completed||[]).forEach(o=>historial[o.id]=o); refreshUI(); }
+      RT.connect({ onMessage:(m)=>{
+        if(m.type==='init'){
+          // El estado inicial también llega al reconectarse: se reemplaza, no se acumula.
+          for(const k in activos) delete activos[k];
+          for(const k in historial) delete historial[k];
+          (m.orders||[]).forEach(o=>activos[o.id]=o); (m.completed||[]).forEach(o=>historial[o.id]=o); refreshUI(); }
         else if(m.type==='new_order'){ activos[m.order.id]=m.order; refreshUI(); }
         else if(m.type==='order_complete'){ const o=activos[m.id]; if(o){ o.completedAt=m.completedAt; historial[m.id]=o; delete activos[m.id]; } refreshUI(); }
         else if(m.type==='order_invoiced'){ const o=historial[m.id]||activos[m.id]; if(o){ o.facturado=true; o.facturaNum=m.number; } refreshUI(); }
         else if(m.type==='order_updated'){ const o=m.order; if(historial[o.id]) historial[o.id]=o; else activos[o.id]=o; refreshUI(); }
         else if(m.type==='order_cancelled'){ delete activos[m.id]; delete historial[m.id]; refreshUI(); }
         else if(m.type==='history_cleared'){ for(const k in historial) delete historial[k]; refreshUI(); }
-      };
-      ws.onclose=()=>setTimeout(connect,3000);
-      ws.onerror=()=>ws.close();
+      }});
     }
     function refresh(){ location.reload(); }
     function refreshUI(){ renderDashboard(); renderPedidos(); renderClientes(); const b=document.getElementById('navBadge'); if(b) b.textContent=Object.keys(activos).length; }

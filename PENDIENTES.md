@@ -7,6 +7,52 @@ se hacen todos juntos cuando el proyecto vaya a desplegarse en un servidor real.
 
 ---
 
+## 🟡 Listo para Vercel: sin estado y con avisos por Supabase Realtime
+
+El sistema era un servidor Node encendido todo el día: guardaba los pedidos en
+un array en memoria y repartía los avisos con su propio WebSocketServer. Eso
+funciona en el local del restaurante, pero no en Vercel, donde cada petición
+puede atenderla una instancia distinta y recién creada. Dos cosas se rompían:
+
+- **El array en memoria.** Un pedido creado en una instancia no existía para la
+  otra. Ahora **toda lectura le pega a Supabase** (`store-supabase.js`); la
+  única fuente de verdad es la base. De paso, `completar()` quedó atómico
+  (filtra por `estado = 'pendiente'`), así que dos pantallas de cocina tocando
+  "listo" a la vez ya no completan dos veces el mismo pedido.
+- **El WebSocket propio.** Cada instancia tendría sus propias conexiones, así
+  que la comanda podía no enterarse nunca de un pedido nuevo. Ahora el reparto
+  lo hace **Supabase Realtime**: el servidor publica por HTTP (`realtime.js`,
+  sin mantener conexión) y las pantallas se suscriben al canal (`src/realtime.js`).
+  Las pantallas reciben exactamente los mismos mensajes de antes.
+
+Otros cambios que trajo esto:
+
+- **`config.js`** — las credenciales salen de variables de entorno y caen a los
+  archivos locales solo si existen. En Vercel no hay `supabase.config.js`.
+- **`GET /estado-inicial`** — lo que antes viajaba en el primer mensaje del
+  socket. Se vuelve a pedir en cada reconexión, así que una pantalla que estuvo
+  caída se pone al día sola.
+- **`GET /realtime-config`** — le entrega al navegador la anon key (pública) sin
+  tenerla escrita en cada HTML.
+- **`sql/04_archivado.sql`** — estado `archivado`. "Limpiar historial" antes solo
+  vaciaba el array: al reiniciar, los pedidos volvían. Ahora queda en la BD sin
+  borrar la venta (los reportes viven de esos datos).
+- **`api/index.js` + `vercel.json`** — el mismo `server.js` sirve en local
+  (`node server.js`) y como función en Vercel.
+- Se quitó la dependencia `ws`, que ya no se usa.
+
+**Variables de entorno que hay que definir en Vercel:**
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `JWT_SECRET`
+(y las de Factus cuando se active la facturación: `FACTUS_EMAIL`,
+`FACTUS_PASSWORD`, `FACTUS_NUMBERING_RANGE_ID`, `FACTUS_MUNICIPALITY_ID`).
+
+> Nota de costo: hoy `vercel.json` manda **todas** las rutas a la función,
+> incluidos los HTML e imágenes. Para el volumen de un restaurante da igual,
+> pero si algún día se quiere ahorrar invocaciones, los estáticos de `src/`
+> deberían salir por el CDN en vez de por la función.
+
+---
+
 ## ✅ Login por persona + pantalla de Usuarios (hecho — 2026-08-05)
 
 Se acabó el PIN compartido por rol. Ahora **cada persona tiene su cuenta**: en el login

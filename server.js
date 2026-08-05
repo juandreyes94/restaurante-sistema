@@ -1,12 +1,11 @@
 const express = require('express');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
-const { WebSocketServer } = require('ws');
-const http = require('http');
 const path = require('path');
 const os = require('os');
 const store = require('./store-supabase');
-const factusConfig = require('./factus.config.js');
+const { broadcast } = require('./realtime');
+const { factus: factusConfig, jwtSecret, jwtEsDeDesarrollo, supabase: supaCfg } = require('./config');
 
 // ── Factus token cache (requiere Node 18+ para fetch nativo) ──
 let _factusToken = null;
@@ -16,8 +15,8 @@ async function getFactusToken() {
   if (_factusToken && Date.now() < _factusTokenExpiry) return _factusToken;
   const body = new URLSearchParams({
     grant_type: 'password',
-    client_id: '2',
-    client_secret: 'factus2024',
+    client_id: factusConfig.clientId,
+    client_secret: factusConfig.clientSecret,
     username: factusConfig.email,
     password: factusConfig.password,
   });
@@ -34,23 +33,26 @@ async function getFactusToken() {
 }
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'src')));
 
-const clients = new Set();
-
 // ── Acceso: una cuenta por persona, sesión sin estado ──
 // El token es un JWT firmado, no una entrada en un Map en memoria: así la
 // sesión sobrevive a reinicios y sirve con varias instancias del servidor.
-const JWT_SECRET = process.env.JWT_SECRET || 'coraje-dev-secret-cambiar-en-produccion';
+const JWT_SECRET = jwtSecret;
 const JWT_HORAS = 12;   // un turno largo
 
-if (!process.env.JWT_SECRET) {
+if (jwtEsDeDesarrollo) {
   console.warn('⚠️  JWT_SECRET no está definido: usando uno de desarrollo. Defínelo antes de desplegar.');
 }
+
+// Lo que el navegador necesita para suscribirse a los avisos en vivo.
+// La anon key es pública por diseño (va al cliente igual); se sirve desde aquí
+// para no tenerla escrita a mano en cada HTML ni versionada en el repo.
+app.get('/realtime-config', (req, res) => {
+  res.json({ url: supaCfg.url, anonKey: supaCfg.anonKey || null });
+});
 
 // El login pide la persona y su PIN (patrón de POS: tocas tu nombre y marcas).
 app.post('/login', async (req, res) => {
@@ -127,7 +129,10 @@ function requireRole(...roles) {
 //    Se carga en memoria al arrancar (store.init) — ya no se hardcodea aquí. ──
 
 // ── Productos (catálogo del menú) ──
-app.get('/productos', (req, res) => res.json(store.products()));
+app.get('/productos', async (req, res) => {
+  try { res.json(await store.products()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 app.post('/productos', requireRole('admin'), async (req, res) => {
   const { nombre, categoria, precio, disponible, imagen, descripcion, precioCombo, emoji } = req.body || {};
@@ -149,7 +154,7 @@ app.post('/productos', requireRole('admin'), async (req, res) => {
 
 app.put('/productos/:id', requireRole('admin'), async (req, res) => {
   const id = parseInt(req.params.id);
-  if (!store.productGet(id)) return res.status(404).json({ error: 'Producto no encontrado' });
+  if (!await store.productGet(id)) return res.status(404).json({ error: 'Producto no encontrado' });
   const { nombre, categoria, precio, disponible, imagen, descripcion, precioCombo, emoji } = req.body || {};
   const fields = {};
   if (nombre      !== undefined) fields.nombre = String(nombre).trim();
@@ -250,7 +255,7 @@ app.get('/recetas', requireRole('cocina', 'admin'), async (req, res) => {
 // Reemplaza la receta completa de un producto (items: [{insumo_id, cantidad}])
 app.put('/recetas/:productoId', requireRole('cocina', 'admin'), async (req, res) => {
   const productoId = parseInt(req.params.productoId);
-  if (!store.productGet(productoId)) return res.status(404).json({ error: 'Producto no encontrado' });
+  if (!await store.productGet(productoId)) return res.status(404).json({ error: 'Producto no encontrado' });
   const items = req.body?.items;
   if (!Array.isArray(items)) return res.status(400).json({ error: 'Falta la lista de insumos' });
   try {
@@ -259,22 +264,17 @@ app.put('/recetas/:productoId', requireRole('cocina', 'admin'), async (req, res)
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-// ── WebSocket ──
-wss.on('connection', (ws) => {
-  clients.add(ws);
-  // Enviar pedidos pendientes (cocina) y completados (control) al conectarse
-  ws.send(JSON.stringify({ type: 'init', orders: store.pendientes(), completed: store.completados() }));
-
-  ws.on('close', () => clients.delete(ws));
-  ws.on('error', () => clients.delete(ws));
+// ── Estado inicial ──
+// Antes esto viajaba en el primer mensaje del WebSocket, al conectarse. Ahora
+// que los avisos los reparte Supabase, la pantalla lo pide por HTTP al entrar
+// (y otra vez al reconectarse, para recuperar lo que se haya perdido mientras
+// estuvo caída).
+app.get('/estado-inicial', requireRole('cocina', 'mesero', 'admin'), async (req, res) => {
+  try {
+    const [orders, completed] = await Promise.all([store.pendientes(), store.completados()]);
+    res.json({ orders, completed });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-function broadcast(msg) {
-  const data = JSON.stringify(msg);
-  clients.forEach(ws => {
-    if (ws.readyState === ws.OPEN) ws.send(data);
-  });
-}
 
 // ── Rutas API ──
 
@@ -310,7 +310,7 @@ app.post('/pedido', requireRole('mesero', 'admin'), async (req, res) => {
       facturado: false,
       usuario: req.usuario,          // queda registrado quién tomó el pedido
     });
-    broadcast({ type: 'new_order', order });
+    await broadcast({ type: 'new_order', order });
     res.json({ success: true, id: order.id });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -321,7 +321,7 @@ app.post('/pedido/:id/completar', requireRole('cocina', 'admin'), async (req, re
   try {
     const order = await store.completar(id);
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
-    broadcast({ type: 'order_complete', id, completedAt: order.completedAt, order });
+    await broadcast({ type: 'order_complete', id, completedAt: order.completedAt, order });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -329,7 +329,7 @@ app.post('/pedido/:id/completar', requireRole('cocina', 'admin'), async (req, re
 // Editar un pedido pendiente (corrección) — se refleja en cocina y admin al instante
 app.put('/pedido/:id', requireRole('mesero', 'admin'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const actual = store.get(id);
+  const actual = await store.get(id);
   if (!actual) return res.status(404).json({ error: 'Pedido no encontrado' });
   if (actual.status !== 'pendiente') return res.status(409).json({ error: 'Solo se pueden editar pedidos pendientes' });
 
@@ -351,7 +351,7 @@ app.put('/pedido/:id', requireRole('mesero', 'admin'), async (req, res) => {
       notas:  (notas  || '').trim(),
       usuario: req.usuario,          // quién hizo la corrección
     });
-    broadcast({ type: 'order_updated', order });
+    await broadcast({ type: 'order_updated', order });
     res.json({ success: true, order });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -359,34 +359,37 @@ app.put('/pedido/:id', requireRole('mesero', 'admin'), async (req, res) => {
 // Cancelar / eliminar un pedido pendiente
 app.delete('/pedido/:id', requireRole('mesero', 'admin'), async (req, res) => {
   const id = parseInt(req.params.id);
-  if (!store.get(id)) return res.status(404).json({ error: 'Pedido no encontrado' });
+  if (!await store.get(id)) return res.status(404).json({ error: 'Pedido no encontrado' });
   try {
     await store.remove(id, req.usuario);   // quién canceló
-    broadcast({ type: 'order_cancelled', id });
+    await broadcast({ type: 'order_cancelled', id });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Listar pedidos pendientes
-app.get('/pedidos', requireRole('cocina', 'mesero', 'admin'), (req, res) => {
-  res.json(store.pendientes());
+app.get('/pedidos', requireRole('cocina', 'mesero', 'admin'), async (req, res) => {
+  try { res.json(await store.pendientes()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Limpiar todos los pedidos completados
 app.delete('/pedidos/completados', requireRole('cocina', 'admin'), async (req, res) => {
-  await store.clearCompletados();
-  broadcast({ type: 'history_cleared' });
-  res.json({ success: true });
+  try {
+    await store.clearCompletados();
+    await broadcast({ type: 'history_cleared' });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Emitir factura electrónica via Factus
 app.post('/facturar/:id', requireRole('cocina', 'admin'), async (req, res) => {
-  if (factusConfig.email === 'TU_EMAIL@ejemplo.com') {
+  if (!factusConfig.configurado) {
     return res.status(503).json({ error: 'Configura tus credenciales en factus.config.js' });
   }
 
   const id = parseInt(req.params.id);
-  const order = store.get(id);
+  const order = await store.get(id);
   if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
 
   const nit    = (req.body?.nit || order.nit || '').trim() || '222222222222';
@@ -448,7 +451,7 @@ app.post('/facturar/:id', requireRole('cocina', 'admin'), async (req, res) => {
 
     if (bill?.cufe) {
       await store.marcarFacturado(order.id, { cufe: bill.cufe, number: bill.number });
-      broadcast({ type: 'order_invoiced', id: order.id, number: bill.number });
+      await broadcast({ type: 'order_invoiced', id: order.id, number: bill.number });
       return res.json({ success: true, cufe: bill.cufe, number: bill.number });
     }
 
@@ -475,24 +478,33 @@ function getLocalIP() {
 
 const PORT = process.env.PORT || 3000;
 
-// Cargar la caché desde Supabase ANTES de aceptar conexiones
-store.init().then(() => {
-  server.listen(PORT, '0.0.0.0', () => {
-    const ip = getLocalIP();
-    console.log('\n╔════════════════════════════════════════╗');
-    console.log('║     🍽️   SISTEMA DE PEDIDOS ACTIVO      ║');
-    console.log('╠════════════════════════════════════════╣');
-    console.log(`║  Red local: http://${ip}:${PORT}         `);
-    console.log(`║  Menú:      http://${ip}:${PORT}/menu.html`);
-    console.log(`║  Meseros:   http://${ip}:${PORT}/mesero.html`);
-    console.log(`║  Comandas:  http://${ip}:${PORT}/comanda.html`);
-    console.log(`║  Admin:     http://${ip}:${PORT}/admin.html`);
-    console.log(`║  QR Codes:  http://${ip}:${PORT}/qr.html`);
-    console.log('╚════════════════════════════════════════╝');
-    console.log('🔒 Acceso: cada persona entra con su nombre y su PIN (se administran desde Admin → Usuarios)');
-    console.log('☁️  Datos en Supabase\n');
+// El app se exporta para que lo levante quien corresponda: en local el
+// `listen` de aquí abajo, en Vercel la función de api/index.js.
+module.exports = app;
+
+// require.main === module: solo arrancamos un servidor propio si este archivo
+// se ejecutó directamente (`node server.js`). Si lo importaron, no.
+if (require.main === module) {
+  // Comprobar que Supabase responde ANTES de aceptar conexiones: si las
+  // credenciales están mal, mejor saberlo aquí que en el primer pedido.
+  store.init().then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      const ip = getLocalIP();
+      console.log('\n╔════════════════════════════════════════╗');
+      console.log('║     🍽️   SISTEMA DE PEDIDOS ACTIVO      ║');
+      console.log('╠════════════════════════════════════════╣');
+      console.log(`║  Red local: http://${ip}:${PORT}         `);
+      console.log(`║  Menú:      http://${ip}:${PORT}/menu.html`);
+      console.log(`║  Meseros:   http://${ip}:${PORT}/mesero.html`);
+      console.log(`║  Comandas:  http://${ip}:${PORT}/comanda.html`);
+      console.log(`║  Admin:     http://${ip}:${PORT}/admin.html`);
+      console.log(`║  QR Codes:  http://${ip}:${PORT}/qr.html`);
+      console.log('╚════════════════════════════════════════╝');
+      console.log('🔒 Acceso: cada persona entra con su nombre y su PIN (se administran desde Admin → Usuarios)');
+      console.log('☁️  Datos en Supabase · avisos en vivo por Supabase Realtime\n');
+    });
+  }).catch(err => {
+    console.error('❌ No se pudo conectar a Supabase al arrancar:', err.message);
+    process.exit(1);
   });
-}).catch(err => {
-  console.error('❌ No se pudo conectar a Supabase al arrancar:', err.message);
-  process.exit(1);
-});
+}

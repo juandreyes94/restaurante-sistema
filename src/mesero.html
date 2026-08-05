@@ -307,6 +307,8 @@
   <div id="toastBox"></div>
 
   <script src="auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+  <script src="realtime.js"></script>
   <script>
     // Escapa texto de usuario/catálogo antes de inyectarlo con innerHTML
     function esc(v){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -508,16 +510,12 @@
     let editingId = null;
     const orders = {};   // pedidos pendientes (activos)
     const ready = {};    // pedidos marcados LISTOS por cocina, esperando que el mesero los recoja
-    let ws;
 
     function drawerOpen(){ return document.getElementById('drawer').classList.contains('open'); }
     function updateActiveBadge(){ document.getElementById('activeBadge').textContent = Object.keys(orders).length; }
 
     function connectWS(){
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}`);
-      ws.onmessage = (e) => {
-        const m = JSON.parse(e.data);
+      RT.connect({ onMessage: (m) => {
         if (m.type === 'init'){
           for (const k in orders) delete orders[k];
           (m.orders || []).forEach(o => orders[o.id] = o);
@@ -534,9 +532,7 @@
           if (o) onOrderReady(o);
           if (drawerOpen()) renderActiveList();
         }
-      };
-      ws.onclose = () => setTimeout(connectWS, 3000);
-      ws.onerror = () => { try { ws.close(); } catch {} };
+      }});
     }
 
     // ── Aviso "listo para recoger" (sonido + tarjeta persistente) ──

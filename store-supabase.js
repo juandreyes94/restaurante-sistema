@@ -1,30 +1,32 @@
 // ─────────────────────────────────────────────────────────────
 //  Capa de datos — Supabase (reemplazo de store.js)
-//  Estrategia: caché en memoria + escritura hacia Supabase (write-through).
-//   · Lecturas (pendientes/completados/products) → memoria, síncronas
-//     → el frontend (comanda/mesero/admin) no cambia de forma.
-//   · Escrituras → memoria (instantáneo para el WebSocket) + persistencia
-//     en Supabase por detrás. El inventario se descuenta/devuelve vía RPC.
+//
+//  Sin estado: cada lectura le pega a Supabase. Antes había una caché en
+//  memoria que se llenaba al arrancar, lo cual servía cuando el sistema era
+//  un solo proceso encendido todo el día. Al pasar a funciones (Vercel) eso
+//  se rompe: cada invocación puede ser una instancia distinta y recién
+//  creada, así que un pedido escrito en una no existiría para la otra.
+//  La única fuente de verdad es la base de datos.
+//
+//  El inventario se descuenta/devuelve vía RPC.
 //  Un proyecto Supabase = un negocio (sin negocio_id).
 // ─────────────────────────────────────────────────────────────
 const { createClient } = require('@supabase/supabase-js');
-const cfg = require('./supabase.config.js');
+const cfg = require('./config').supabase;
 
 const supa = createClient(cfg.url, cfg.serviceRoleKey, { auth: { persistSession: false } });
 
-// ── Caché en memoria ──
-let _orders = [];          // pedidos (pendientes + completados recientes) con forma del frontend
-let _products = [];        // productos con forma del frontend
-let _catById = new Map();  // categoria_id -> nombre
+// Un pedido siempre se lee con sus ítems: el frontend los espera juntos.
+const SELECT_PEDIDO = '*, pedido_items(*)';
 
 const ms = (iso) => (iso ? new Date(iso).getTime() : Date.now());
 
 // DB → forma que ya espera el frontend
-function mapProducto(p) {
+function mapProducto(p, catById) {
   return {
     id: p.id,
     nombre: p.nombre,
-    categoria: _catById.get(p.categoria_id) || '',
+    categoria: catById.get(p.categoria_id) || '',
     categoria_id: p.categoria_id,
     descripcion: p.descripcion || '',
     precio: p.precio,
@@ -62,26 +64,58 @@ function mapOrder(o) {
   };
 }
 
-// ── Arranque: cargar caché desde Supabase ──
+// ── Arranque: solo comprobar que la BD responde ──
+// Ya no precarga nada; sirve para fallar temprano y con un mensaje claro si
+// las credenciales están mal, en vez de reventar en el primer pedido.
 async function init() {
-  const [{ data: cats }, { data: prods }, { data: peds }] = await Promise.all([
+  const { error } = await supa.from('productos').select('id', { count: 'exact', head: true });
+  if (error) throw error;
+}
+
+// ── Catálogo (categorías + productos) ──
+async function catalogo() {
+  const [{ data: cats }, { data: prods }] = await Promise.all([
     supa.from('categorias').select('id,nombre').order('orden'),
     supa.from('productos').select('*').order('categoria_id').order('orden'),
-    supa.from('pedidos')
-      .select('*, pedido_items(*)')
-      .in('estado', ['pendiente', 'completado'])
-      .order('creado_en'),
   ]);
-  _catById = new Map((cats || []).map(c => [c.id, c.nombre]));
-  _products = (prods || []).map(mapProducto);
-  _orders = (peds || []).map(mapOrder);
-  console.log(`💾 Supabase: ${_products.length} productos, ${_orders.length} pedidos en caché`);
+  const catById = new Map((cats || []).map(c => [c.id, c.nombre]));
+  return { catById, productos: (prods || []).map(p => mapProducto(p, catById)) };
+}
+
+async function products() {
+  return (await catalogo()).productos;
+}
+
+async function productGet(id) {
+  const [{ data: p }, { data: cats }] = await Promise.all([
+    supa.from('productos').select('*').eq('id', id).maybeSingle(),
+    supa.from('categorias').select('id,nombre'),
+  ]);
+  if (!p) return null;
+  return mapProducto(p, new Map((cats || []).map(c => [c.id, c.nombre])));
+}
+
+// ── Lecturas de pedidos ──
+async function pedidosPorEstado(estados) {
+  const { data, error } = await supa.from('pedidos')
+    .select(SELECT_PEDIDO).in('estado', estados).order('creado_en');
+  if (error) throw error;
+  return (data || []).map(mapOrder);
+}
+
+const pendientes  = () => pedidosPorEstado(['pendiente']);
+const completados = () => pedidosPorEstado(['completado']);
+const all         = () => pedidosPorEstado(['pendiente', 'completado']);
+
+async function get(id) {
+  const { data } = await supa.from('pedidos').select(SELECT_PEDIDO).eq('id', id).maybeSingle();
+  return data ? mapOrder(data) : null;
 }
 
 // ── Resolver producto_id de un ítem (por id explícito o por nombre) ──
-function resolveProductoId(item) {
+function resolveProductoId(item, productos) {
   if (item.productoId) return item.productoId;
-  const p = _products.find(p => p.nombre === item.name);
+  const p = productos.find(p => p.nombre === item.name);
   return p ? p.id : null;
 }
 
@@ -104,9 +138,10 @@ async function add(order) {
   }).select('*').single();
   if (error) throw error;
 
+  const { productos } = await catalogo();
   const items = (order.items || []).map(i => ({
     pedido_id: ped.id,
-    producto_id: resolveProductoId(i),
+    producto_id: resolveProductoId(i, productos),
     nombre: i.name,
     precio: i.price,
     cantidad: i.qty,
@@ -122,27 +157,30 @@ async function add(order) {
   });
   await refreshProductosAgotados();
 
-  const full = mapOrder({ ...ped, pedido_items: items });
-  _orders.push(full);
-  return full;
+  return mapOrder({ ...ped, pedido_items: items });
 }
 
 // ── Completar ──
+// El filtro por estado 'pendiente' hace la operación atómica: si dos pantallas
+// de cocina tocan "listo" a la vez, la segunda recibe null en vez de volver a
+// completar un pedido ya cerrado (y de re-emitir el aviso al mesero).
 async function completar(id) {
-  const o = _orders.find(o => o.id === id);
-  if (!o) return null;
-  o.status = 'completado';
-  o.completedAt = Date.now();
-  await supa.from('pedidos').update({ estado: 'completado', completado_en: new Date(o.completedAt).toISOString() }).eq('id', id);
-  return o;
+  const completadoEn = new Date().toISOString();
+  const { data } = await supa.from('pedidos')
+    .update({ estado: 'completado', completado_en: completadoEn })
+    .eq('id', id).eq('estado', 'pendiente')
+    .select(SELECT_PEDIDO).maybeSingle();
+  return data ? mapOrder(data) : null;
 }
 
 // ── Editar pedido pendiente (reajusta inventario: devuelve y vuelve a descontar) ──
 async function editar(id, fields) {
-  const o = _orders.find(o => o.id === id);
-  if (!o) return null;
+  const actual = await get(id);
+  if (!actual) return null;
   const quien = fields.usuario;
-  Object.assign(o, fields, { editedAt: Date.now() });
+  const o = { ...actual, ...fields };
+  const { productos } = await catalogo();
+
   await supa.rpc('devolver_inventario_pedido', {
     p_pedido_id: id, p_usuario: quien?.nombre || 'mesero', p_usuario_id: quien?.id ?? null });
   await supa.from('pedidos').update({
@@ -152,20 +190,17 @@ async function editar(id, fields) {
   }).eq('id', id);
   await supa.from('pedido_items').delete().eq('pedido_id', id);
   await supa.from('pedido_items').insert(o.items.map(i => ({
-    pedido_id: id, producto_id: resolveProductoId(i),
+    pedido_id: id, producto_id: resolveProductoId(i, productos),
     nombre: i.name, precio: i.price, cantidad: i.qty, es_combo: !!i.esCombo,
   })));
   await supa.rpc('descontar_inventario_pedido', {
     p_pedido_id: id, p_usuario: quien?.nombre || 'mesero', p_usuario_id: quien?.id ?? null });
   await refreshProductosAgotados();
-  return o;
+  return await get(id);
 }
 
 // ── Cancelar pedido pendiente (devuelve inventario) ──
 async function remove(id, usuario) {
-  const i = _orders.findIndex(o => o.id === id);
-  if (i === -1) return;
-  _orders.splice(i, 1);
   await supa.rpc('devolver_inventario_pedido', {
     p_pedido_id: id, p_usuario: usuario?.nombre || 'mesero', p_usuario_id: usuario?.id ?? null });
   await supa.from('pedidos').update({ estado: 'cancelado' }).eq('id', id);
@@ -174,15 +209,20 @@ async function remove(id, usuario) {
 
 // ── Marcar facturado ──
 async function marcarFacturado(id, { cufe, number }) {
-  const o = _orders.find(o => o.id === id);
-  if (o) { o.facturado = true; o.cufe = cufe; o.facturaNum = number; }
-  await supa.from('pedidos').update({ facturado: true, cufe, factura_num: number }).eq('id', id);
-  return o;
+  const { data } = await supa.from('pedidos')
+    .update({ facturado: true, cufe, factura_num: number })
+    .eq('id', id).select(SELECT_PEDIDO).maybeSingle();
+  return data ? mapOrder(data) : null;
 }
 
 // ── Limpiar completados de la vista (no borra de la BD: quedan como histórico) ──
+// Antes solo vaciaba el array en memoria, así que el "limpiar" duraba hasta el
+// siguiente reinicio. Ahora los marca 'archivado': salen de la vista de cocina
+// y del historial del día, pero la venta sigue en la BD para los reportes.
 async function clearCompletados() {
-  _orders = _orders.filter(o => o.status === 'pendiente');
+  const { error } = await supa.from('pedidos')
+    .update({ estado: 'archivado' }).eq('estado', 'completado');
+  if (error) throw error;
 }
 
 // ── Productos (CRUD) ──
@@ -194,9 +234,7 @@ async function productAdd(p) {
     emoji: p.emoji || '', disponible: p.disponible !== false,
   }).select('*').single();
   if (error) throw error;
-  const mp = mapProducto(data);
-  _products.push(mp);
-  return mp;
+  return await productGet(data.id);
 }
 async function productUpdate(id, fields) {
   const patch = {};
@@ -210,23 +248,20 @@ async function productUpdate(id, fields) {
   if (fields.disponible !== undefined) patch.disponible = !!fields.disponible;
   const { data, error } = await supa.from('productos').update(patch).eq('id', id).select('*').single();
   if (error) throw error;
-  const mp = mapProducto(data);
-  const idx = _products.findIndex(p => p.id === id);
-  if (idx >= 0) _products[idx] = mp;
-  return mp;
+  return await productGet(data.id);
 }
 async function productDelete(id) {
   await supa.from('productos').delete().eq('id', id);
-  _products = _products.filter(p => p.id !== id);
 }
 
 // categoria por nombre → id (crea la categoría si no existe)
 async function categoriaId(nombre) {
   if (!nombre) return null;
-  for (const [id, n] of _catById) if (n === nombre) return id;
+  const { data: existe } = await supa.from('categorias')
+    .select('id').eq('nombre', nombre).maybeSingle();
+  if (existe) return existe.id;
   const { data } = await supa.from('categorias').insert({ nombre }).select('id').single();
-  if (data) { _catById.set(data.id, nombre); return data.id; }
-  return null;
+  return data ? data.id : null;
 }
 
 // ── Inventario ──
@@ -379,27 +414,17 @@ async function recetaSet(productoId, items) {
   return filas;
 }
 
-// Refresca el flag "agotado" de los productos en caché tras cambios de stock
+// Recalcula el flag "agotado" de los productos tras cambios de stock.
+// El resultado queda en la BD, que es de donde lo lee todo el mundo.
 async function refreshProductosAgotados() {
   await supa.rpc('recalcular_agotados');
-  const { data } = await supa.from('productos').select('id,agotado,disponible');
-  const byId = new Map((data || []).map(p => [p.id, p]));
-  _products.forEach(p => {
-    const db = byId.get(p.id);
-    if (db) { p.agotado = db.agotado; p.disponible = db.disponible && !db.agotado; }
-  });
 }
 
 module.exports = {
   init,
-  // Lecturas (síncronas desde caché)
-  all: () => _orders,
-  pendientes: () => _orders.filter(o => o.status === 'pendiente'),
-  completados: () => _orders.filter(o => o.status === 'completado'),
-  get: (id) => _orders.find(o => o.id === id),
-  products: () => _products,
-  productGet: (id) => _products.find(p => p.id === id),
-  // Escrituras (async, write-through)
+  // Lecturas (async: van a la BD, no a memoria)
+  all, pendientes, completados, get, products, productGet,
+  // Escrituras
   add, completar, editar, remove, marcarFacturado, clearCompletados,
   productAdd, productUpdate, productDelete,
   // Inventario

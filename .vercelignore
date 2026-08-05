@@ -1,0 +1,11 @@
+# Las credenciales en el servidor salen de variables de entorno, no de estos
+# archivos. Que no viajen en el bundle.
+supabase.config.js
+factus.config.js
+
+# Nada de esto hace falta para servir la app
+data/
+sql/
+scripts/
+docs/
+PENDIENTES.md
