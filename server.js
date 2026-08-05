@@ -1,10 +1,10 @@
 const express = require('express');
 const multer = require('multer');
+const jwt = require('jsonwebtoken');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 const path = require('path');
 const os = require('os');
-const crypto = require('crypto');
 const store = require('./store-supabase');
 const factusConfig = require('./factus.config.js');
 
@@ -42,32 +42,83 @@ app.use(express.static(path.join(__dirname, 'src')));
 
 const clients = new Set();
 
-// ── Acceso por PIN (rol) ──
-// Cambia los PIN con variables de entorno PIN_COCINA / PIN_ADMIN, o aquí.
-const PINS = {
-  cocina: process.env.PIN_COCINA || '1234',
-  mesero: process.env.PIN_MESERO || '5678',
-  admin:  process.env.PIN_ADMIN  || '9876',
-};
-const _tokens = new Map(); // token -> role
+// ── Acceso: una cuenta por persona, sesión sin estado ──
+// El token es un JWT firmado, no una entrada en un Map en memoria: así la
+// sesión sobrevive a reinicios y sirve con varias instancias del servidor.
+const JWT_SECRET = process.env.JWT_SECRET || 'coraje-dev-secret-cambiar-en-produccion';
+const JWT_HORAS = 12;   // un turno largo
 
-app.post('/login', (req, res) => {
-  const pin = String(req.body?.pin || '').trim();
-  const role = Object.keys(PINS).find(r => PINS[r] === pin);
-  if (!role) return res.status(401).json({ error: 'PIN incorrecto' });
-  const token = crypto.randomBytes(16).toString('hex');
-  _tokens.set(token, role);
-  res.json({ ok: true, role, token });
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET no está definido: usando uno de desarrollo. Defínelo antes de desplegar.');
+}
+
+// El login pide la persona y su PIN (patrón de POS: tocas tu nombre y marcas).
+app.post('/login', async (req, res) => {
+  const { usuario_id, pin } = req.body || {};
+  if (!usuario_id || !pin) return res.status(400).json({ error: 'Falta el usuario o el PIN' });
+  try {
+    const u = await store.verificarPin(usuario_id, pin);
+    if (!u) return res.status(401).json({ error: 'PIN incorrecto' });
+    const token = jwt.sign(
+      { uid: u.id, nombre: u.nombre, rol: u.rol },
+      JWT_SECRET, { expiresIn: `${JWT_HORAS}h` });
+    res.json({ ok: true, role: u.rol, nombre: u.nombre, usuario_id: u.id, token });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// Lista para pintar el login: solo id, nombre y rol de la gente activa.
+app.get('/usuarios/activos', async (req, res) => {
+  try { res.json(await store.usuariosActivos()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Gestión de usuarios (solo admin) ──
+app.get('/usuarios', requireRole('admin'), async (req, res) => {
+  try { res.json(await store.usuarios()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/usuarios', requireRole('admin'), async (req, res) => {
+  const { nombre, rol, pin } = req.body || {};
+  if (!String(nombre || '').trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  if (!['mesero', 'cocina', 'admin'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
+  if (!/^\d{4,8}$/.test(String(pin || ''))) return res.status(400).json({ error: 'El PIN debe tener entre 4 y 8 dígitos' });
+  try { res.json({ success: true, usuario: await store.usuarioAdd({ nombre: String(nombre).trim(), rol, pin }) }); }
+  catch (e) { res.status(errorHttp(e)).json({ error: errorUsuario(e) }); }
+});
+
+app.put('/usuarios/:id', requireRole('admin'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { nombre, rol, pin, activo } = req.body || {};
+  if (nombre !== undefined && !String(nombre).trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  if (rol !== undefined && !['mesero', 'cocina', 'admin'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
+  if (pin && !/^\d{4,8}$/.test(String(pin))) return res.status(400).json({ error: 'El PIN debe tener entre 4 y 8 dígitos' });
+  // Dos formas de quedarse fuera del panel uno mismo: desactivarse o bajarse el rol.
+  if (id === req.usuario.id) {
+    if (activo === false) return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
+    if (rol !== undefined && rol !== 'admin') return res.status(400).json({ error: 'No puedes quitarte tu propio rol de administrador' });
+  }
+  try { res.json({ success: true, usuario: await store.usuarioUpdate(id, req.body || {}) }); }
+  catch (e) { res.status(errorHttp(e)).json({ error: errorUsuario(e) }); }
+});
+
+// El nombre es único (índice en la BD): sin esto llegaría el error crudo de Postgres.
+const errorHttp = (e) => (e?.code === '23505' ? 400 : 500);
+const errorUsuario = (e) => (e?.code === '23505'
+  ? 'Ya hay alguien con ese nombre. Usa el apellido o una inicial para diferenciarlos.'
+  : e.message);
 
 // Middleware para proteger rutas por rol
 function requireRole(...roles) {
   return (req, res, next) => {
-    const role = _tokens.get(req.get('x-auth-token') || '');
-    if (!role || !roles.includes(role)) {
+    let payload;
+    try { payload = jwt.verify(req.get('x-auth-token') || '', JWT_SECRET); }
+    catch { return res.status(403).json({ error: 'Sesión inválida o vencida' }); }
+    if (!roles.includes(payload.rol)) {
       return res.status(403).json({ error: 'Acceso no autorizado' });
     }
-    req.role = role;
+    req.role = payload.rol;
+    req.usuario = { id: payload.uid, nombre: payload.nombre, rol: payload.rol };
     next();
   };
 }
@@ -180,7 +231,7 @@ app.post('/insumos/:id/entrada', requireRole('admin'), async (req, res) => {
   const cantidad = Number(req.body?.cantidad);
   if (!(cantidad > 0)) return res.status(400).json({ error: 'Cantidad inválida' });
   try {
-    const nuevo = await store.insumoEntrada(parseInt(req.params.id), cantidad, req.role);
+    const nuevo = await store.insumoEntrada(parseInt(req.params.id), cantidad, req.usuario);
     res.json({ success: true, stock: nuevo });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -257,6 +308,7 @@ app.post('/pedido', requireRole('mesero', 'admin'), async (req, res) => {
       timestamp: Date.now() - (Number(agoMin) > 0 ? Number(agoMin) * 60000 : 0),
       status: 'pendiente',
       facturado: false,
+      usuario: req.usuario,          // queda registrado quién tomó el pedido
     });
     broadcast({ type: 'new_order', order });
     res.json({ success: true, id: order.id });
@@ -297,6 +349,7 @@ app.put('/pedido/:id', requireRole('mesero', 'admin'), async (req, res) => {
       items,
       nombre: (nombre || '').trim(),
       notas:  (notas  || '').trim(),
+      usuario: req.usuario,          // quién hizo la corrección
     });
     broadcast({ type: 'order_updated', order });
     res.json({ success: true, order });
@@ -308,7 +361,7 @@ app.delete('/pedido/:id', requireRole('mesero', 'admin'), async (req, res) => {
   const id = parseInt(req.params.id);
   if (!store.get(id)) return res.status(404).json({ error: 'Pedido no encontrado' });
   try {
-    await store.remove(id);
+    await store.remove(id, req.usuario);   // quién canceló
     broadcast({ type: 'order_cancelled', id });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -436,7 +489,7 @@ store.init().then(() => {
     console.log(`║  Admin:     http://${ip}:${PORT}/admin.html`);
     console.log(`║  QR Codes:  http://${ip}:${PORT}/qr.html`);
     console.log('╚════════════════════════════════════════╝');
-    console.log(`🔒 Acceso por PIN — cocina: ${PINS.cocina}  ·  mesero: ${PINS.mesero}  ·  admin: ${PINS.admin}`);
+    console.log('🔒 Acceso: cada persona entra con su nombre y su PIN (se administran desde Admin → Usuarios)');
     console.log('☁️  Datos en Supabase\n');
   });
 }).catch(err => {

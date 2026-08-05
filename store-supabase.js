@@ -100,6 +100,7 @@ async function add(order) {
     estado: 'pendiente',
     total,
     creado_en: new Date(order.timestamp || Date.now()).toISOString(),
+    usuario_id: order.usuario?.id ?? null,
   }).select('*').single();
   if (error) throw error;
 
@@ -114,7 +115,11 @@ async function add(order) {
   await supa.from('pedido_items').insert(items);
 
   // Descontar inventario (ignora ítems sin producto_id / sin receta)
-  await supa.rpc('descontar_inventario_pedido', { p_pedido_id: ped.id, p_usuario: 'mesero' });
+  await supa.rpc('descontar_inventario_pedido', {
+    p_pedido_id: ped.id,
+    p_usuario: order.usuario?.nombre || 'mesero',
+    p_usuario_id: order.usuario?.id ?? null,
+  });
   await refreshProductosAgotados();
 
   const full = mapOrder({ ...ped, pedido_items: items });
@@ -136,8 +141,10 @@ async function completar(id) {
 async function editar(id, fields) {
   const o = _orders.find(o => o.id === id);
   if (!o) return null;
+  const quien = fields.usuario;
   Object.assign(o, fields, { editedAt: Date.now() });
-  await supa.rpc('devolver_inventario_pedido', { p_pedido_id: id, p_usuario: 'mesero' });
+  await supa.rpc('devolver_inventario_pedido', {
+    p_pedido_id: id, p_usuario: quien?.nombre || 'mesero', p_usuario_id: quien?.id ?? null });
   await supa.from('pedidos').update({
     tipo: o.tipo, mesa: o.mesa, direccion: o.direccion, telefono: o.telefono,
     cliente_nombre: o.nombre, notas: o.notas,
@@ -148,17 +155,19 @@ async function editar(id, fields) {
     pedido_id: id, producto_id: resolveProductoId(i),
     nombre: i.name, precio: i.price, cantidad: i.qty, es_combo: !!i.esCombo,
   })));
-  await supa.rpc('descontar_inventario_pedido', { p_pedido_id: id, p_usuario: 'mesero' });
+  await supa.rpc('descontar_inventario_pedido', {
+    p_pedido_id: id, p_usuario: quien?.nombre || 'mesero', p_usuario_id: quien?.id ?? null });
   await refreshProductosAgotados();
   return o;
 }
 
 // ── Cancelar pedido pendiente (devuelve inventario) ──
-async function remove(id) {
+async function remove(id, usuario) {
   const i = _orders.findIndex(o => o.id === id);
   if (i === -1) return;
   _orders.splice(i, 1);
-  await supa.rpc('devolver_inventario_pedido', { p_pedido_id: id, p_usuario: 'mesero' });
+  await supa.rpc('devolver_inventario_pedido', {
+    p_pedido_id: id, p_usuario: usuario?.nombre || 'mesero', p_usuario_id: usuario?.id ?? null });
   await supa.from('pedidos').update({ estado: 'cancelado' }).eq('id', id);
   await refreshProductosAgotados();
 }
@@ -231,7 +240,9 @@ async function insumoEntrada(id, cantidad, usuario = 'admin') {
   await supa.from('insumos').update({ stock: nuevo }).eq('id', id);
   await supa.from('movimientos_inventario').insert({
     insumo_id: id, tipo: 'entrada', cantidad: Number(cantidad), stock_resultante: nuevo,
-    motivo: 'Entrada de stock', usuario,
+    motivo: 'Entrada de stock',
+    usuario: usuario?.nombre || String(usuario || 'admin'),
+    usuario_id: usuario?.id ?? null,
   });
   await refreshProductosAgotados();
   return nuevo;
@@ -261,6 +272,53 @@ async function movimientos(insumoId) {
 async function alertas() {
   const { data } = await supa.from('insumos').select('*').eq('activo', true);
   return (data || []).filter(i => Number(i.stock) <= Number(i.stock_min));
+}
+
+// ── Usuarios (una cuenta por persona) ──
+// El PIN nunca sale de aquí: se guarda con hash y solo se compara.
+const bcrypt = require('bcryptjs');
+
+// Lista mínima para pintar el login: sin hash, sin nada sensible.
+async function usuariosActivos() {
+  const { data } = await supa.from('usuarios')
+    .select('id,nombre,rol').eq('activo', true).order('rol').order('nombre');
+  return data || [];
+}
+
+async function usuarios() {
+  const { data } = await supa.from('usuarios')
+    .select('id,nombre,rol,activo,creado_en').order('rol').order('nombre');
+  return data || [];
+}
+
+// Devuelve el usuario si el PIN es correcto; null si no.
+async function verificarPin(usuarioId, pin) {
+  const { data: u } = await supa.from('usuarios')
+    .select('id,nombre,rol,activo,pin_hash').eq('id', usuarioId).maybeSingle();
+  if (!u || !u.activo) return null;
+  if (!bcrypt.compareSync(String(pin || ''), u.pin_hash)) return null;
+  return { id: u.id, nombre: u.nombre, rol: u.rol };
+}
+
+async function usuarioAdd({ nombre, rol, pin }) {
+  const { data, error } = await supa.from('usuarios').insert({
+    nombre, rol, pin_hash: bcrypt.hashSync(String(pin), 10), activo: true,
+  }).select('id,nombre,rol,activo').single();
+  if (error) throw error;
+  return data;
+}
+
+async function usuarioUpdate(id, fields) {
+  const patch = {};
+  if (fields.nombre !== undefined) patch.nombre = String(fields.nombre).trim();
+  if (fields.rol    !== undefined) patch.rol = fields.rol;
+  if (fields.activo !== undefined) patch.activo = !!fields.activo;
+  // El PIN solo se toca si mandan uno nuevo — nunca se devuelve ni se registra.
+  if (fields.pin) patch.pin_hash = bcrypt.hashSync(String(fields.pin), 10);
+  const { data, error } = await supa.from('usuarios')
+    .update(patch).eq('id', id).select('id,nombre,rol,activo').single();
+  if (error) throw error;
+  return data;
 }
 
 // ── Imágenes de productos (Supabase Storage, bucket público "productos") ──
@@ -350,6 +408,8 @@ module.exports = {
   recetas, recetaSet,
   // Imágenes
   uploadImagen,
+  // Usuarios
+  usuariosActivos, usuarios, verificarPin, usuarioAdd, usuarioUpdate,
   // Compatibilidad: el catálogo ahora vive en la BD, no se siembra desde el código
   ensureCatalog: () => {},
   save: () => {},

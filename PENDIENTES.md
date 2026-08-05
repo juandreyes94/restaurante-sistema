@@ -3,7 +3,49 @@
 Notas de endurecimiento del sistema. Estos puntos **no** aplican en pruebas locales;
 se hacen todos juntos cuando el proyecto vaya a desplegarse en un servidor real.
 
-Última actualización: 2026-07-27
+Última actualización: 2026-08-05
+
+---
+
+## ✅ Login por persona + pantalla de Usuarios (hecho — 2026-08-05)
+
+Se acabó el PIN compartido por rol. Ahora **cada persona tiene su cuenta**: en el login
+elige el rol, toca su nombre y marca su PIN. Así queda registrado **quién** tomó cada
+pedido y **quién** movió el inventario (antes en `movimientos_inventario` decía "mesero").
+
+- **`sql/03_usuarios.sql`** — tabla `usuarios` (PIN con hash bcrypt, nombre único sin
+  importar mayúsculas, `activo` en vez de borrar para no perder el autor del historial),
+  `usuario_id` en `pedidos` y en `movimientos_inventario`, y las funciones
+  `descontar/devolver_inventario_pedido` recreadas con un tercer parámetro `p_usuario_id`.
+- **Sesión sin estado**: el token dejó de ser una entrada en un `Map` en memoria y pasó a
+  ser un **JWT firmado** (12 h). Sobrevive a reinicios del servidor y sirve con varias
+  instancias. Secreto en `JWT_SECRET` (avisa por consola si no está definido).
+- **`src/auth.js`** — login estilo POS en las 5 pantallas: pestaña de rol → nombre → PIN.
+- **Admin → Usuarios** (`src/admin.html`) — crear gente, cambiar rol, reasignar PIN y
+  activar/desactivar. Guardas: nadie puede desactivarse a sí mismo ni quitarse su propio
+  rol de admin (bloqueado en la UI y también en el servidor).
+- **`scripts/crear-usuarios.js`** — siembra el equipo inicial conservando los PINs viejos
+  (admin 9876 · cocina 1234 · mesero 5678). También agrega gente suelta:
+  `node scripts/crear-usuarios.js "Ana" mesero 4321`.
+
+**Ya aplicado en Supabase (2026-08-05):** se corrió `sql/03_usuarios.sql` y luego
+`node scripts/crear-usuarios.js`. El equipo quedó sembrado con los PINs de siempre
+(Administrador 9876 · Cocina 1234 · Mesero 5678). Si algún día se levanta la base desde
+cero, ese es el orden: `01_schema.sql` → `02_seed_productos.sql` → `03_usuarios.sql` →
+`crear-usuarios.js`.
+
+**Verificado end-to-end** contra el servidor y la BD: login y PIN incorrecto, CRUD de
+usuarios, nombre repetido con otra capitalización, PIN fuera de rango, cambio de PIN
+(invalida el anterior), desactivar (saca del login y niega el acceso), las dos guardas de
+auto-desactivación y auto-degradación respondiendo desde el **servidor**, roles cruzados y
+token inventado → 403. Y lo que motivaba todo esto: un pedido de prueba quedó con su
+`usuario_id` y sus movimientos de inventario firmados con el nombre de quien los hizo.
+Los datos de esa prueba ya se limpiaron (el pedido se canceló por el flujo normal, así que
+el inventario volvió a su sitio).
+
+Nota: al desactivar a alguien o cambiarle el PIN, su sesión abierta sigue viva hasta que
+vence el JWT (máx. 12 h). Si algún día importa cortar al instante, habría que revisar
+`activo` en cada request o guardar una lista de tokens revocados.
 
 ---
 
@@ -35,29 +77,17 @@ Falta la pestaña "COSTOS GENERAL" del cliente para llenar `costo_unitario`.
 
 ---
 
-## 🎯 PRÓXIMO PASO — Carga de imágenes de productos a Supabase Storage
+## 🎯 PRÓXIMO PASO — Subir las fotos reales de los productos
 
-Hoy las fotos de productos se sirven por **ruta local** (`img/hamburguesa-coraje.jpg`)
-o URL. Falta que el dueño pueda **subir fotos desde el panel** y que se guarden en
-**Supabase Storage** (para que el catálogo sea 100% autogestionable y clonable).
+La **mecánica ya está hecha** (commit `cb2f2ab`): bucket público `productos` en Supabase
+Storage, `POST /upload` (rol admin, multer en memoria, máx 5 MB), `store.uploadImagen()`
+y el selector de foto con vista previa en el modal de producto del admin.
+Ojo: `sharp` se quitó a propósito (rompía en Linux) — **no** re-agregarlo.
 
-**Plan concreto (para retomar):**
-1. **Supabase:** crear un bucket **público** llamado `productos` en Storage
-   (Storage → New bucket → Public).
-2. **Backend (`server.js` + `store-supabase.js`):**
-   - Agregar `multer` (memory storage) para recibir el archivo.
-   - Endpoint `POST /upload` (rol admin) → recibe imagen → `supa.storage.from('productos')
-     .upload(nombreUnico, buffer, { contentType })` → devuelve la **URL pública**
-     (`supa.storage.from('productos').getPublicUrl(path)`).
-   - Método `store.uploadImagen(buffer, filename, mime)` en el adaptador.
-   - Ojo: `sharp` se quitó a propósito (rompía en Railung/Linux) — **no** re-agregarlo;
-     si se quiere limitar peso, validar tamaño en el cliente o `multer` `limits`.
-3. **Frontend (`src/admin.html`, modal de producto):**
-   - Agregar `<input type="file" accept="image/*">` en el modal.
-   - Al elegir archivo: subirlo a `/upload`, recibir la URL, y meterla en `#fImagen`
-     (mostrar preview). El resto del guardado de producto ya funciona igual.
-4. (Opcional) Migrar las imágenes actuales de `src/img/*.jpg` al bucket para no depender
-   de archivos locales al desplegar.
+Lo que falta es **contenido, no código**: hoy la BD tiene 35 productos, **0 con foto en
+Storage** y **16 sin ninguna imagen**. Hay que subirlas desde Admin → Productos → Editar
+(o pedirle al cliente las que falten) y, de paso, migrar las de `src/img/*.jpg` al bucket
+para no depender de archivos locales al desplegar.
 
 Notas del estado actual de datos (por si confunde al retomar): la BD de Supabase tiene
 **datos de prueba** de esta sesión — un pedido #3 completado (por eso el dashboard
@@ -96,20 +126,21 @@ Todo probado end-to-end (mesero → cocina → stock baja; entrada de reposició
 
 ## 🔴 Pendiente para el despliegue
 
-### 1. PINs y secretos fuera del código
-Hoy están hardcodeados y se imprimen en consola al arrancar.
-
-- `server.js:46-50` — PINs por defecto `cocina: 1234` / `mesero: 5678` / `admin: 9876`.
-  Mover a variables de entorno reales (`PIN_COCINA`, `PIN_MESERO`, `PIN_ADMIN`) y **quitar los valores por defecto**.
-- El `console.log` del banner imprime los PINs al iniciar. Quitarlo en producción.
+### 1. Secretos fuera del código
+- **`JWT_SECRET`** — hoy cae a un valor de desarrollo si no está definido (lo avisa por
+  consola al arrancar). Definirlo como variable de entorno **antes de desplegar**: con el
+  secreto de dev, cualquiera puede firmarse un token de admin.
+- Los PINs ya **no** están en el código: viven cifrados en la tabla `usuarios` y el banner
+  de arranque dejó de imprimirlos. Los de arranque (9876/1234/5678) son públicos de facto
+  — cambiarlos desde Admin → Usuarios antes de entregar.
 - `server.js:18-19` — `client_id` / `client_secret` de Factus hardcodeados. Mover a `factus.config.js`
   (que ya está en `.gitignore`) o a variables de entorno.
 - `factus.config.js` — llenar credenciales reales (hoy tiene placeholders `TU_EMAIL@ejemplo.com`).
 
-### 2. Tokens de sesión persistentes
-- `server.js:50` — `_tokens` es un `Map` en memoria: al reiniciar el server se cierran todas las sesiones.
-  Solo es tema si algún día hay varios servidores / balanceo. Evaluar mover a una store persistente
-  (Redis o la misma BD) cuando se migre de JSON a Postgres (ver `store.js`).
+### 2. ~~Tokens de sesión persistentes~~ ✅ resuelto
+El `Map` en memoria se reemplazó por JWT firmado: la sesión ya sobrevive al reinicio del
+servidor y funcionaría con varias instancias. Queda solo el detalle de la revocación
+inmediata (ver la nota de la sección de usuarios).
 
 ### 3. Cosmético (cuando se toque esa pantalla)
 - `src/comanda.html` — la leyenda del semáforo (~línea 561) y los comentarios del código (~línea 891)

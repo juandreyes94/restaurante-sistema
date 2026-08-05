@@ -30,6 +30,13 @@
     .role-tab { flex:1; padding:0.55rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:0.4rem; }
     .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
     .role-tab .i { width:1.1em; height:1.1em; }
+    .user-list { display:flex; flex-wrap:wrap; gap:0.4rem; justify-content:center; margin-top:0.8rem; }
+    .user-chip { padding:0.5rem 0.9rem; border-radius:10px; border:1px solid var(--border); background:var(--surface-2);
+      color:var(--ink); font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; transition:all 0.15s; }
+    .user-chip:hover { border-color:var(--red); }
+    .user-chip.active { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+    .login-vacio { color:var(--ink-soft); font-size:0.82rem; margin-top:0.9rem; line-height:1.5; }
+    .login-vacio code { background:var(--surface-2); padding:0.1rem 0.35rem; border-radius:5px; font-size:0.78rem; }
     .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; transition:border-color 0.2s; }
     .pin-input:focus { border-color:var(--red); }
     .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
@@ -107,9 +114,12 @@
       <h1>Inventario</h1>
       <p>Elige tu acceso e ingresa el código</p>
       <div class="role-tabs" id="roleTabs"></div>
+      <div class="user-list" id="userList"></div>
+      <div id="pinRow" style="display:none">
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off"
              placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
+      </div>
       <div class="login-err" id="loginErr"></div>
     </div>
   </div>

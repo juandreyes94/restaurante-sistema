@@ -187,6 +187,13 @@
     .role-tabs { display:flex; gap:0.4rem; margin-top:1.1rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
     .role-tab { flex:1; padding:0.55rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:0.4rem; }
     .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+    .user-list { display:flex; flex-wrap:wrap; gap:0.4rem; justify-content:center; margin-top:0.8rem; }
+    .user-chip { padding:0.5rem 0.9rem; border-radius:10px; border:1px solid var(--border); background:var(--surface-2);
+      color:var(--ink); font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; transition:all 0.15s; }
+    .user-chip:hover { border-color:var(--red); }
+    .user-chip.active { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 2px 8px rgba(251,62,44,0.35); }
+    .login-vacio { color:var(--ink-soft); font-size:0.82rem; margin-top:0.9rem; line-height:1.5; }
+    .login-vacio code { background:var(--surface-2); padding:0.1rem 0.35rem; border-radius:5px; font-size:0.78rem; }
     .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; }
     .pin-input:focus { border-color:var(--red); }
     .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
@@ -216,8 +223,9 @@
     .modal { background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg); width:100%; max-width:400px; padding:1.5rem; animation:fade 0.2s ease; }
     .modal h3 { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.03em; margin-bottom:1rem; }
     .modal label { display:block; font-size:0.8rem; font-weight:600; color:var(--ink-soft); margin-bottom:0.9rem; }
-    .modal label input:not([type=checkbox]) { width:100%; margin-top:0.3rem; padding:0.6rem 0.7rem; border:1px solid var(--border); border-radius:10px; font-size:0.9rem; font-family:inherit; color:var(--ink); background:var(--surface-2); outline:none; }
-    .modal label input:focus { border-color:var(--red); }
+    .modal label input:not([type=checkbox]), .modal label select { width:100%; margin-top:0.3rem; padding:0.6rem 0.7rem; border:1px solid var(--border); border-radius:10px; font-size:0.9rem; font-family:inherit; color:var(--ink); background:var(--surface-2); outline:none; }
+    .modal label input:focus, .modal label select:focus { border-color:var(--red); }
+    .modal .ayuda { font-size:0.75rem; font-weight:500; color:var(--muted); margin:-0.6rem 0 0.9rem; line-height:1.45; }
     .modal label.chk { display:flex; align-items:center; gap:0.5rem; }
     .modal-actions { display:flex; justify-content:flex-end; gap:0.6rem; margin-top:0.3rem; }
     /* ── Foto del producto ── */
@@ -258,8 +266,11 @@
       <h1>Ingreso</h1>
       <p>Elige tu acceso e ingresa el código</p>
       <div class="role-tabs" id="roleTabs"></div>
+      <div class="user-list" id="userList"></div>
+      <div id="pinRow" style="display:none">
       <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
+      </div>
       <div class="login-err" id="loginErr"></div>
     </div>
   </div>
@@ -271,7 +282,7 @@
       <div class="brand">
         <img src="logo.png" alt="Coraje" />
         <div class="name">Coraje Fast Food</div>
-        <div class="user">admin_coraje</div>
+        <div class="user" id="sideUser">admin_coraje</div>
         <div class="role">ADMIN</div>
       </div>
       <nav class="nav" id="nav"></nav>
@@ -411,6 +422,24 @@
         </div>
       </section>
 
+      <!-- USUARIOS — el equipo que entra al sistema (una cuenta por persona) -->
+      <section class="panel" id="p-usuarios">
+        <div style="display:flex;gap:0.7rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center">
+          <div class="search" style="margin:0;flex:1;min-width:180px">
+            <svg class="i" viewBox="0 0 24 24" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="searchUsuarios" placeholder="Buscar por nombre o rol..." oninput="renderEquipo()" />
+          </div>
+          <button class="btn primary" onclick="openUsuario()">
+            <svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Nuevo usuario
+          </button>
+        </div>
+        <div class="section-title">Equipo <span class="count" id="equipoCount">(0)</span></div>
+        <div class="card"><div class="table-wrap"><table id="equipoTable">
+          <thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th><th>Desde</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div></div>
+      </section>
+
       <!-- Placeholders de módulos futuros -->
       <section class="panel" id="p-generic"></section>
     </div>
@@ -451,6 +480,29 @@
     </div>
   </div>
 
+  <!-- MODAL USUARIO -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <h3 id="userModalTitle">Nuevo usuario</h3>
+      <label>Nombre<input type="text" id="uNombre" placeholder="Ej. Ana Gómez" /></label>
+      <p class="ayuda">Es el nombre que va a tocar en la pantalla de ingreso, y el que queda firmando sus pedidos y movimientos de inventario.</p>
+      <label>Rol
+        <select id="uRol">
+          <option value="mesero">Mesero — toma pedidos</option>
+          <option value="cocina">Cocina — comandas, inventario y recetas</option>
+          <option value="admin">Administrador — acceso total</option>
+        </select>
+      </label>
+      <label id="uPinLabel">PIN (4 a 8 dígitos)<input type="password" id="uPin" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="••••" /></label>
+      <p class="ayuda" id="uPinAyuda">Se guarda cifrado: nadie puede verlo después, ni tú. Si se le olvida, le asignas uno nuevo desde aquí.</p>
+      <label class="chk" id="uActivoLabel"><input type="checkbox" id="uActivo" checked /> Activo (puede entrar al sistema)</label>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeUsuario()">Cancelar</button>
+        <button class="btn primary" onclick="saveUsuario()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-tip" id="chartTip"></div>
   <div id="toastBox"></div>
 
@@ -471,7 +523,7 @@
       { id:'gastos', label:'Gastos', icon:'<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>', soon:true },
       { id:'reportes', label:'Reportes', icon:'<path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="0.5"/><rect x="12" y="7" width="3" height="11" rx="0.5"/><rect x="17" y="4" width="3" height="14" rx="0.5"/>', soon:true },
       { id:'menu', label:'Menú Digital', icon:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3M17 20v.5M20.5 14v3M20.5 20v.5"/>', panel:'menu' },
-      { id:'usuarios', label:'Usuarios', icon:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M22 20a6.5 6.5 0 0 0-4.6-6.2"/>', soon:true },
+      { id:'usuarios', label:'Usuarios', icon:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M22 20a6.5 6.5 0 0 0-4.6-6.2"/>', panel:'usuarios' },
     ];
     const TIPOS = {
       mesa:{icon:'🍽️',label:'En mesa',color:'#2563eb'},
@@ -497,6 +549,8 @@
       if(_started) return; _started=true;
       document.getElementById('loginOverlay').style.display='none';
       document.getElementById('app').style.display='flex';
+      const yo=getAuth();
+      if(yo?.nombre) document.getElementById('sideUser').textContent=yo.nombre;
       buildNav(); connect();
     }
 
@@ -512,7 +566,7 @@
       document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.id===id));
       document.getElementById('pageTitle').textContent=item.label==='Dashboard'?'Dashboard':item.label==='Pedidos'?'Gestión de Pedidos':item.label;
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-      if(item.panel){ document.getElementById('p-'+item.panel).classList.add('active'); if(item.panel==='productos') loadProductos(); if(item.panel==='inventario') loadInventario(); if(item.panel==='recetas') loadRecetas(); }
+      if(item.panel){ document.getElementById('p-'+item.panel).classList.add('active'); if(item.panel==='productos') loadProductos(); if(item.panel==='inventario') loadInventario(); if(item.panel==='recetas') loadRecetas(); if(item.panel==='usuarios') loadEquipo(); }
       else { // módulo futuro
         const g=document.getElementById('p-generic');
         g.innerHTML=`<div class="card"><div class="soon-box"><div class="ic-big">${svg(item.icon)}</div><h2>${item.label}</h2><p>Este módulo está en el plan y se activará próximamente. La estructura y el acceso ya están listos.</p></div></div>`;
@@ -879,6 +933,111 @@
       if (!confirm('¿Eliminar este producto del catálogo?')) return;
       await fetch(`/productos/${id}`, { method:'DELETE', headers: authHeaders() });
       loadProductos();
+    }
+
+    // ── Usuarios (el equipo) ──
+    // Ojo con los nombres: auth.js ya usa _usuarios / renderUsuarios para la
+    // lista del login. Aquí todo va como "equipo" para no pisarlo.
+    const ROL_COLOR = { mesero:'#ea580c', cocina:'#2563eb', admin:'#7c3aed' };
+    let _equipo = [];
+    let _editUserId = null;
+
+    async function loadEquipo(){
+      try {
+        const r = await fetch('/usuarios', { headers: authHeaders() });
+        if (sesionExpirada(r)) return;
+        _equipo = await r.json();
+        if (!Array.isArray(_equipo)) _equipo = [];
+      } catch { _equipo = []; }
+      renderEquipo();
+    }
+
+    function renderEquipo(){
+      const q = (document.getElementById('searchUsuarios').value || '').toLowerCase();
+      const yo = getAuth();
+      const list = _equipo.filter(u => !q
+        || u.nombre.toLowerCase().includes(q)
+        || (NOMBRE_ROL[u.rol] || u.rol).toLowerCase().includes(q));
+      document.getElementById('equipoCount').textContent = `(${list.length})`;
+      document.querySelector('#equipoTable tbody').innerHTML = list.length ? list.map(u => {
+        const soyYo = yo && Number(yo.usuario_id) === Number(u.id);
+        const color = ROL_COLOR[u.rol] || 'var(--muted)';
+        return `<tr${u.activo ? '' : ' style="opacity:0.55"'}>
+          <td><b>${esc(u.nombre)}</b>${soyYo ? ' <span class="chip" style="background:var(--surface-2);color:var(--muted)">tú</span>' : ''}</td>
+          <td><span class="chip" style="background:${color}22;color:${color}">${esc(NOMBRE_ROL[u.rol] || u.rol)}</span></td>
+          <td>${u.activo
+            ? '<span class="chip" style="background:rgba(22,163,74,0.14);color:var(--green-dark)">Activo</span>'
+            : '<span class="chip" style="background:var(--surface-2);color:var(--muted)">Inactivo</span>'}</td>
+          <td>${u.creado_en ? new Date(u.creado_en).toLocaleDateString('es-CO') : '—'}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="mini" onclick="openUsuario(${u.id})">Editar</button>
+            ${soyYo ? '' : `<button class="mini ${u.activo ? 'danger' : ''}" onclick="toggleActivo(${u.id})">${u.activo ? 'Desactivar' : 'Activar'}</button>`}
+          </td></tr>`;
+      }).join('')
+        : `<tr class="empty-row"><td colspan="5">No hay usuarios que coincidan. Crea uno con “+ Nuevo usuario”.</td></tr>`;
+    }
+
+    function openUsuario(id){
+      const u = id ? _equipo.find(x => x.id === id) : null;
+      _editUserId = id || null;
+      const yo = getAuth();
+      const soyYo = !!(u && yo && Number(yo.usuario_id) === Number(u.id));
+      document.getElementById('userModalTitle').textContent = u ? 'Editar usuario' : 'Nuevo usuario';
+      document.getElementById('uNombre').value = u ? u.nombre : '';
+      document.getElementById('uRol').value = u ? u.rol : 'mesero';
+      // Cambiarse el rol a uno mismo es la forma más fácil de quedar fuera del panel.
+      document.getElementById('uRol').disabled = soyYo;
+      document.getElementById('uPin').value = '';
+      document.getElementById('uPinLabel').firstChild.textContent = u ? 'PIN nuevo (opcional)' : 'PIN (4 a 8 dígitos)';
+      document.getElementById('uPinAyuda').textContent = u
+        ? 'Déjalo vacío para conservar el PIN actual. Si lo cambias, avísale a la persona.'
+        : 'Se guarda cifrado: nadie puede verlo después, ni tú. Si se le olvida, le asignas uno nuevo desde aquí.';
+      document.getElementById('uActivo').checked = u ? !!u.activo : true;
+      document.getElementById('uActivoLabel').style.display = soyYo ? 'none' : 'flex';
+      document.getElementById('userModal').classList.add('open');
+      setTimeout(() => document.getElementById('uNombre').focus(), 50);
+    }
+    function closeUsuario(){ document.getElementById('userModal').classList.remove('open'); }
+
+    async function saveUsuario(){
+      const nombre = document.getElementById('uNombre').value.trim();
+      const pin = document.getElementById('uPin').value.trim();
+      if (!nombre){ toast('El nombre es obligatorio'); return; }
+      if (!_editUserId && !/^\d{4,8}$/.test(pin)){ toast('El PIN debe tener entre 4 y 8 dígitos'); return; }
+      if (_editUserId && pin && !/^\d{4,8}$/.test(pin)){ toast('El PIN debe tener entre 4 y 8 dígitos'); return; }
+
+      const body = { nombre, rol: document.getElementById('uRol').value };
+      if (pin) body.pin = pin;
+      if (_editUserId) body.activo = document.getElementById('uActivo').checked;
+      if (document.getElementById('uRol').disabled) delete body.rol;   // el propio admin no cambia su rol
+
+      try {
+        const r = await fetch(_editUserId ? `/usuarios/${_editUserId}` : '/usuarios', {
+          method: _editUserId ? 'PUT' : 'POST',
+          headers: { 'Content-Type':'application/json', ...authHeaders() },
+          body: JSON.stringify(body),
+        });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        if (d.success){ toast(_editUserId ? 'Usuario actualizado' : `${nombre} ya puede entrar`); closeUsuario(); loadEquipo(); }
+        else toast('❌ ' + (d.error || 'Error al guardar'));
+      } catch { toast('❌ Error de conexión'); }
+    }
+
+    async function toggleActivo(id){
+      const u = _equipo.find(x => x.id === id); if (!u) return;
+      // Se desactiva, no se borra: así los pedidos viejos conservan a su autor.
+      if (u.activo && !confirm(`¿Desactivar a ${u.nombre}? No podrá entrar al sistema, pero su historial se conserva.`)) return;
+      try {
+        const r = await fetch(`/usuarios/${id}`, {
+          method:'PUT', headers:{ 'Content-Type':'application/json', ...authHeaders() },
+          body: JSON.stringify({ activo: !u.activo }),
+        });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        if (d.success) loadEquipo();
+        else toast('❌ ' + (d.error || 'No se pudo cambiar'));
+      } catch { toast('❌ Error de conexión'); }
     }
 
     async function facturar(id){
