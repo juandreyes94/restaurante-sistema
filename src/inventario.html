@@ -351,7 +351,14 @@
       if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(o => o.classList.remove('open'));
     });
 
-    initAuth({ roles:['cocina','admin'], defaultRole:'cocina', onStart:start });
+    // El admin tiene esta misma pantalla dentro de su panel, con el menu
+    // lateral. Suelta se veria sin menu y parece que las secciones se
+    // perdieron, asi que se le lleva alla. Cocina si la usa suelta.
+    initAuth({ roles:['cocina','admin'], onStart: () => {
+      const yo = getAuth();
+      if (yo?.role === 'admin' && !EMBED) return location.replace('admin.html#inventario');
+      start();
+    } });
   </script>
 </body>
 </html>

@@ -560,7 +560,10 @@
     function buildNav(){
       const nav=document.getElementById('nav');
       nav.innerHTML=NAV.map(n=>`<a data-id="${n.id}" onclick="go('${n.id}')">${svg(n.icon)}<span>${n.label}</span>${n.badge?`<span class="badge" id="navBadge">0</span>`:n.soon?`<span class="soon">pronto</span>`:''}</a>`).join('');
-      go('dashboard');
+      // admin.html#recetas abre esa seccion directo. Lo usan inventario.html y
+      // recetas.html para traer al admin aca, donde si tiene el menu lateral.
+      const pedida=(location.hash||'').replace('#','');
+      go(NAV.some(n=>n.id===pedida) ? pedida : 'dashboard');
     }
     function go(id){
       const item=NAV.find(n=>n.id===id);
