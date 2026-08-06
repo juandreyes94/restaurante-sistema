@@ -89,19 +89,36 @@ async function doLogin() {
   }
 }
 
-function mostrarLogin() {
+const escAuth = (v) => String(v ?? '').replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+// ajena: hay una sesión abierta que no sirve para esta pantalla.
+function mostrarLogin(ajena) {
   const ov = document.getElementById('loginOverlay');
   if (ov) ov.style.display = 'flex';
+
+  const err = document.getElementById('loginErr');
+  if (ajena && err) {
+    const suya = HOME[ajena.role];
+    err.innerHTML =
+      `Hay una sesión abierta de <b>${escAuth(ajena.nombre)}</b> ` +
+      `(${escAuth(NOMBRE_ROL[ajena.role] || ajena.role)}), que no tiene acceso a esta pantalla. ` +
+      `Entra con la cuenta que corresponda` +
+      (suya ? ` o <a href="${suya}">vuelve a la pantalla de ${escAuth(NOMBRE_ROL[ajena.role] || ajena.role)}</a>` : '') + '.';
+  }
   document.getElementById('userInput')?.focus();
 }
 
-// defaultRole se acepta pero ya no se usa: el rol viene de la cuenta.
 function initAuth({ roles, onStart }) {
   _rolesPagina = roles;
   _onStart = onStart;
 
   const a = getAuth();
-  if (a?.token && roles.includes(a.role)) onStart();      // ya tiene sesión y puede estar aquí
-  else if (a?.token && HOME[a.role]) location.href = HOME[a.role];  // logueado, pero esta no es su pantalla
-  else mostrarLogin();
+  if (a?.token && roles.includes(a.role)) return onStart();   // su cuenta sirve aquí
+
+  // Antes, si la sesión abierta era de otro rol, se redirigía en silencio a la
+  // pantalla de ese rol. Resultado: con un mesero logueado no había forma de
+  // llegar al login del admin — abrías admin.html y aparecía la de mesero.
+  // Ahora se muestra el login para poder entrar con la cuenta correcta.
+  mostrarLogin(a?.token ? a : null);
 }
