@@ -72,7 +72,14 @@
     .btn:hover { transform:translateY(-1px); }
     .btn.primary { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 4px 14px rgba(251,62,44,0.35); }
     .btn.primary:hover { background:var(--red-dark); }
-    .hamburger { display:none; background:none; border:none; color:var(--ink); cursor:pointer; }
+    /* En móvil el menú lateral se pliega, y con solo el icono de tres rayas
+       la gente creía que las secciones habían desaparecido. Se le pone la
+       palabra "Menú" y fondo, para que se lea como un botón. */
+    .hamburger { display:none; align-items:center; gap:0.4rem; background:var(--surface-2);
+      border:1px solid var(--border); border-radius:10px; padding:0.45rem 0.7rem;
+      color:var(--ink); cursor:pointer; font-family:'DM Sans',sans-serif;
+      font-weight:700; font-size:0.82rem; }
+    .hamburger:active { transform:scale(0.96); }
 
     .panel { padding:1.6rem; display:none; }
     .panel.active { display:block; animation:fade 0.25s ease; }
@@ -184,12 +191,11 @@
     .login-card img { height:2.4rem; margin-bottom:0.6rem; }
     .login-card h1 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.06em; }
     .login-card p { color:var(--ink-soft); font-size:0.85rem; margin-top:0.2rem; }
-    .role-tabs { display:flex; gap:0.4rem; margin-top:1.1rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
-    .role-tab { flex:1; padding:0.55rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:0.4rem; }
-    .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
-    .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; }
-    .pin-input:focus { border-color:var(--red); }
-    .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
+    .user-input, .pin-input { width:100%; margin-top:0.7rem; padding:0.85rem 0.9rem; font-size:1rem;
+      font-family:'DM Sans',sans-serif; border:2px solid var(--border); border-radius:12px;
+      color:var(--ink); background:var(--surface-2); outline:none; }
+    .user-input:focus, .pin-input:focus { border-color:var(--red); }
+    .pin-input.err, .user-input.err { border-color:var(--red); animation:shake 0.35s; }
     @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
     .login-btn { width:100%; margin-top:1rem; padding:0.85rem; background:var(--red); color:#fff; border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.08em; cursor:pointer; }
     .login-btn:hover { background:var(--red-dark); }
@@ -257,10 +263,10 @@
     <div class="login-card">
       <img src="logo.png" alt="Coraje" />
       <h1>Ingreso</h1>
-      <p>Elige tu acceso e ingresa el código</p>
-      <div class="role-tabs" id="roleTabs"></div>
+      <p>Entra con tu usuario y contraseña</p>
+      <input class="user-input" id="userInput" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario" onkeydown="if(event.key==='Enter')document.getElementById('pinInput').focus()" />
       <div id="pinRow">
-      <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
+      <input class="pin-input" id="pinInput" type="password" autocomplete="off" placeholder="Contraseña" maxlength="64" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
       </div>
       <div class="login-err" id="loginErr"></div>
@@ -289,7 +295,7 @@
     <!-- CONTENIDO -->
     <div class="content">
       <div class="topbar">
-        <button class="hamburger" onclick="toggleSidebar(true)"><svg class="i" viewBox="0 0 24 24" style="width:1.6em;height:1.6em"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <button class="hamburger" onclick="toggleSidebar(true)" aria-label="Abrir el menú"><svg class="i" viewBox="0 0 24 24" style="width:1.35em;height:1.35em"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Menú</button>
         <h1 id="pageTitle">Dashboard</h1>
         <div class="actions">
           <button class="btn" onclick="refresh()"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Actualizar</button>
@@ -485,7 +491,7 @@
           <option value="admin">Administrador — acceso total</option>
         </select>
       </label>
-      <label id="uPinLabel">PIN (4 a 8 dígitos)<input type="password" id="uPin" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="••••" /></label>
+      <label id="uPinLabel">PIN (4 a 8 dígitos)<input type="password" id="uPin" autocomplete="new-password" maxlength="64" placeholder="Contraseña" /></label>
       <p class="ayuda" id="uPinAyuda">Se guarda cifrado: nadie puede verlo después, ni tú. Si se le olvida, le asignas uno nuevo desde aquí.</p>
       <label class="chk" id="uActivoLabel"><input type="checkbox" id="uActivo" checked /> Activo (puede entrar al sistema)</label>
       <div class="modal-actions">

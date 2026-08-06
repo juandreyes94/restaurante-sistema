@@ -26,13 +26,11 @@
     .login-card img { height:2.4rem; width:auto; margin-bottom:0.6rem; }
     .login-card h1 { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.06em; }
     .login-card p { color:var(--ink-soft); font-size:0.85rem; margin-top:0.2rem; }
-    .role-tabs { display:flex; gap:0.4rem; margin-top:1.1rem; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:0.3rem; }
-    .role-tab { flex:1; padding:0.55rem; border:none; border-radius:9px; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; color:var(--ink-soft); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:0.4rem; }
-    .role-tab.active { background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(251,62,44,0.35); }
-    .role-tab .i { width:1.1em; height:1.1em; }
-    .pin-input { width:100%; margin-top:0.8rem; padding:0.9rem; text-align:center; font-size:1.8rem; letter-spacing:0.5em; font-family:'Bebas Neue',sans-serif; border:2px solid var(--border); border-radius:12px; color:var(--ink); background:var(--surface-2); outline:none; transition:border-color 0.2s; }
-    .pin-input:focus { border-color:var(--red); }
-    .pin-input.err { border-color:var(--red); animation:shake 0.35s; }
+    .user-input, .pin-input { width:100%; margin-top:0.7rem; padding:0.85rem 0.9rem; font-size:1rem;
+      font-family:'DM Sans',sans-serif; border:2px solid var(--border); border-radius:12px;
+      color:var(--ink); background:var(--surface-2); outline:none; }
+    .user-input:focus, .pin-input:focus { border-color:var(--red); }
+    .pin-input.err, .user-input.err { border-color:var(--red); animation:shake 0.35s; }
     @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
     @keyframes slideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
     .login-btn { width:100%; margin-top:1rem; padding:0.85rem; background:var(--red); color:#fff; border:none; border-radius:12px; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.08em; cursor:pointer; transition:background 0.2s; }
@@ -129,11 +127,11 @@
     <div class="login-card">
       <img src="logo.png" alt="Coraje" />
       <h1>Recetas</h1>
-      <p>Elige tu acceso e ingresa el código</p>
-      <div class="role-tabs" id="roleTabs"></div>
+      <p>Entra con tu usuario y contraseña</p>
+      <input class="user-input" id="userInput" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario" onkeydown="if(event.key==='Enter')document.getElementById('pinInput').focus()" />
       <div id="pinRow">
-      <input class="pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="off"
-             placeholder="••••" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()" />
+      <input class="pin-input" id="pinInput" type="password" autocomplete="off"
+             placeholder="Contraseña" maxlength="64" onkeydown="if(event.key==='Enter')doLogin()" />
       <button class="login-btn" onclick="doLogin()">Entrar</button>
       </div>
       <div class="login-err" id="loginErr"></div>

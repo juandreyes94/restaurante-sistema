@@ -1,17 +1,18 @@
 // ─────────────────────────────────────────────────────────────
-//  Acceso por PIN — compartido por todas las pantallas del personal.
+//  Acceso — compartido por todas las pantallas del personal.
 //
 //  Antes cada pantalla tenía su propia copia del login y del enrutado, y se
 //  habían desincronizado (el mesero terminaba en la pantalla de cocina).
 //  Aquí vive una sola vez.
 //
 //  Uso en cada página:
-//    <div class="login-overlay" id="loginOverlay"> ... <div class="role-tabs" id="roleTabs"></div> ...
+//    <div class="login-overlay" id="loginOverlay">
+//      <input id="userInput" /> <input id="pinInput" type="password" /> ...
 //    <script src="auth.js"></script>
 //    initAuth({ roles: ['cocina','admin'], onStart: startApp });
 //
-//  · roles   → qué roles puede USAR esta pantalla. Los demás se redirigen
-//              a la suya (el login siempre ofrece los tres).
+//  · roles   → qué roles puede USAR esta pantalla. A los demás se les manda
+//              a la suya (HOME), según el rol que traiga su cuenta.
 //  · onStart → se llama cuando el rol sí puede quedarse aquí.
 // ─────────────────────────────────────────────────────────────
 
@@ -20,12 +21,6 @@ const AUTH_KEY = 'coraje_auth';
 // Pantalla propia de cada rol: a dónde va al entrar si no puede quedarse aquí.
 const HOME = { mesero: 'mesero.html', cocina: 'comanda.html', admin: 'admin.html' };
 const NOMBRE_ROL = { mesero: 'Mesero', cocina: 'Cocina', admin: 'Administrador' };
-
-const ROLES = [
-  { id: 'mesero', label: 'Mesero', icon: '<path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M2 8h16v5a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5z"/><path d="M6 2v2M10 2v2M14 2v2"/>' },
-  { id: 'cocina', label: 'Cocina', icon: '<path d="M6 13.9A4 4 0 0 1 7.4 6 5 5 0 0 1 16.6 6 4 4 0 0 1 18 13.9V18H6Z"/><path d="M6 21h12"/>' },
-  { id: 'admin',  label: 'Admin',  icon: '<circle cx="12" cy="8" r="4"/><path d="M4 20.5a8 8 0 0 1 16 0"/>' },
-];
 
 function getAuth() {
   try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; }
@@ -51,32 +46,15 @@ function sesionExpirada(res) {
 }
 
 // ── Login ──
-// Patrón de POS: eliges tu rol y marcas tu PIN. Nada de correo y contraseña:
-// escribirlos en una tablet a hora pico es inviable.
+// Usuario y contraseña, como en cualquier sistema.
 //
-// El PIN identifica a la persona dentro de su rol, así que tampoco hay que
-// buscarse en una lista de nombres — un paso menos, y de paso la pantalla de
-// entrada deja de publicar quién trabaja aquí.
+// Antes se elegía el rol con unas pestañas y se marcaba un PIN. Eso traía dos
+// problemas: había que acertarle a la pestaña correcta, y si te equivocabas el
+// sistema te mandaba a la pantalla de ese otro rol — parecía que abriera
+// cualquier cosa al azar. Ahora el rol sale de la cuenta, así que cada quien
+// aterriza siempre donde le toca.
 let _rolesPagina = [];
 let _onStart = () => {};
-let _selRole = null;      // pestaña de rol elegida
-
-function pickRole(r) {
-  _selRole = r;
-  document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
-  const err = document.getElementById('loginErr');
-  if (err) err.textContent = '';
-  document.getElementById('pinInput')?.focus();
-}
-
-function renderRoleTabs() {
-  const box = document.getElementById('roleTabs');
-  if (!box) return;
-  box.innerHTML = ROLES.map(r =>
-    `<button class="role-tab${r.id === _selRole ? ' active' : ''}" data-role="${r.id}" onclick="pickRole('${r.id}')">
-       <svg class="i" viewBox="0 0 24 24">${r.icon}</svg> ${r.label}
-     </button>`).join('');
-}
 
 // A dónde va este rol: se queda si la pantalla lo admite, si no a la suya.
 function routeTo(role) {
@@ -85,14 +63,17 @@ function routeTo(role) {
 }
 
 async function doLogin() {
+  const userInput = document.getElementById('userInput');
   const input = document.getElementById('pinInput');
   const err = document.getElementById('loginErr');
   if (err) err.textContent = '';
-  if (!_selRole) { if (err) err.textContent = 'Elige primero dónde vas a trabajar'; return; }
+  const usuario = (userInput?.value || '').trim();
+  if (!usuario) { if (err) err.textContent = 'Escribe tu usuario'; userInput?.focus(); return; }
+  if (!input.value) { if (err) err.textContent = 'Escribe tu contraseña'; input.focus(); return; }
   try {
     const res = await fetch('/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rol: _selRole, pin: input.value.trim() }),
+      body: JSON.stringify({ usuario, password: input.value }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'PIN incorrecto');
@@ -111,15 +92,13 @@ async function doLogin() {
 function mostrarLogin() {
   const ov = document.getElementById('loginOverlay');
   if (ov) ov.style.display = 'flex';
-  renderRoleTabs();
-  document.getElementById('pinInput')?.focus();
+  document.getElementById('userInput')?.focus();
 }
 
-function initAuth({ roles, onStart, defaultRole }) {
+// defaultRole se acepta pero ya no se usa: el rol viene de la cuenta.
+function initAuth({ roles, onStart }) {
   _rolesPagina = roles;
   _onStart = onStart;
-  _selRole = defaultRole || roles[0] || 'cocina';
-  renderRoleTabs();
 
   const a = getAuth();
   if (a?.token && roles.includes(a.role)) onStart();      // ya tiene sesión y puede estar aquí

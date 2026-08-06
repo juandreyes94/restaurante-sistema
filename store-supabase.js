@@ -335,31 +335,25 @@ async function verificarPin(usuarioId, pin) {
   return { id: u.id, nombre: u.nombre, rol: u.rol };
 }
 
-// El PIN por sí solo identifica a la persona dentro de su rol: no hay que
-// elegir el nombre en una lista, se marca el código y listo. Por eso el PIN
-// tiene que ser único dentro del rol (ver pinEnUso): si dos personas de cocina
-// tuvieran el mismo, la segunda no podría entrar nunca.
-async function verificarPinPorRol(rol, pin) {
-  const clave = String(pin || '');
-  if (!clave) return null;
-  const { data } = await supa.from('usuarios')
-    .select('id,nombre,rol,pin_hash').eq('rol', rol).eq('activo', true).order('id');
-  for (const u of data || []) {
-    if (bcrypt.compareSync(clave, u.pin_hash)) {
-      return { id: u.id, nombre: u.nombre, rol: u.rol };
-    }
-  }
-  return null;
-}
+// Login normal: usuario y contraseña.
+//
+// El "usuario" es el nombre de la persona, que ya era único sin importar
+// mayúsculas (índice en sql/03_usuarios.sql), así que no hizo falta una
+// columna nueva ni otra migración. El rol sale de la cuenta: no se elige al
+// entrar, y por eso nadie termina en una pantalla que no le toca.
+async function verificarCredenciales(usuario, password) {
+  const nombre = String(usuario || '').trim();
+  const clave = String(password || '');
+  if (!nombre || !clave) return null;
 
-// ¿Ya hay alguien en ese rol usando este PIN? Los hashes de bcrypt no se
-// pueden comparar en SQL (cada uno lleva su propia sal), así que toca
-// recorrer. Son pocas personas por rol: no es un problema.
-async function pinEnUso(rol, pin, exceptoId = null) {
-  const clave = String(pin || '');
-  if (!clave) return false;
-  const { data } = await supa.from('usuarios').select('id,pin_hash').eq('rol', rol);
-  return (data || []).some(u => u.id !== exceptoId && bcrypt.compareSync(clave, u.pin_hash));
+  const { data: u } = await supa.from('usuarios')
+    .select('id,nombre,rol,activo,pin_hash')
+    .ilike('nombre', nombre)          // sin distinguir mayúsculas
+    .maybeSingle();
+
+  if (!u || !u.activo) return null;
+  if (!bcrypt.compareSync(clave, u.pin_hash)) return null;
+  return { id: u.id, nombre: u.nombre, rol: u.rol };
 }
 
 async function usuarioAdd({ nombre, rol, pin }) {
@@ -461,7 +455,7 @@ module.exports = {
   // Imágenes
   uploadImagen,
   // Usuarios
-  usuariosActivos, usuarios, verificarPin, verificarPinPorRol, pinEnUso,
+  usuariosActivos, usuarios, verificarPin, verificarCredenciales,
   usuarioAdd, usuarioUpdate,
   // Compatibilidad: el catálogo ahora vive en la BD, no se siembra desde el código
   ensureCatalog: () => {},
