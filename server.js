@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const os = require('os');
 const store = require('./store-supabase');
-const { broadcast } = require('./realtime');
+const { broadcast } = require('./realtime-server');
 const { factus: factusConfig, jwtSecret, jwtEsDeDesarrollo, supabase: supaCfg } = require('./config');
 
 // ── Factus token cache (requiere Node 18+ para fetch nativo) ──
