@@ -54,12 +54,19 @@ app.get('/realtime-config', (req, res) => {
   res.json({ url: supaCfg.url, anonKey: supaCfg.anonKey || null });
 });
 
-// El login pide la persona y su PIN (patrón de POS: tocas tu nombre y marcas).
+// Login: se elige el rol y se marca el PIN. El PIN identifica a la persona
+// dentro de su rol, así que no hay que buscarse en una lista de nombres.
+// Sigue aceptando { usuario_id, pin } por si algo viejo lo usa.
 app.post('/login', async (req, res) => {
-  const { usuario_id, pin } = req.body || {};
-  if (!usuario_id || !pin) return res.status(400).json({ error: 'Falta el usuario o el PIN' });
+  const { usuario_id, rol, pin } = req.body || {};
+  if (!pin) return res.status(400).json({ error: 'Falta el PIN' });
+  if (!usuario_id && !['mesero', 'cocina', 'admin'].includes(rol)) {
+    return res.status(400).json({ error: 'Falta el rol' });
+  }
   try {
-    const u = await store.verificarPin(usuario_id, pin);
+    const u = usuario_id
+      ? await store.verificarPin(usuario_id, pin)
+      : await store.verificarPinPorRol(rol, pin);
     if (!u) return res.status(401).json({ error: 'PIN incorrecto' });
     const token = jwt.sign(
       { uid: u.id, nombre: u.nombre, rol: u.rol },
@@ -85,7 +92,14 @@ app.post('/usuarios', requireRole('admin'), async (req, res) => {
   if (!String(nombre || '').trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
   if (!['mesero', 'cocina', 'admin'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
   if (!/^\d{4,8}$/.test(String(pin || ''))) return res.status(400).json({ error: 'El PIN debe tener entre 4 y 8 dígitos' });
-  try { res.json({ success: true, usuario: await store.usuarioAdd({ nombre: String(nombre).trim(), rol, pin }) }); }
+  try {
+    // El PIN es lo único que se marca al entrar, así que dentro de un rol no
+    // puede repetirse: si no, quien lo comparte no podría entrar nunca.
+    if (await store.pinEnUso(rol, pin)) {
+      return res.status(400).json({ error: 'Ese PIN ya lo usa alguien de ese rol. Elige otro.' });
+    }
+    res.json({ success: true, usuario: await store.usuarioAdd({ nombre: String(nombre).trim(), rol, pin }) });
+  }
   catch (e) { res.status(errorHttp(e)).json({ error: errorUsuario(e) }); }
 });
 
@@ -100,7 +114,18 @@ app.put('/usuarios/:id', requireRole('admin'), async (req, res) => {
     if (activo === false) return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
     if (rol !== undefined && rol !== 'admin') return res.status(400).json({ error: 'No puedes quitarte tu propio rol de administrador' });
   }
-  try { res.json({ success: true, usuario: await store.usuarioUpdate(id, req.body || {}) }); }
+  try {
+    // Mismo motivo que al crear. El rol a validar es el nuevo si lo están
+    // cambiando; si no, el que ya tenía.
+    if (pin) {
+      const actual = (await store.usuarios()).find(u => u.id === id);
+      const rolFinal = rol !== undefined ? rol : actual?.rol;
+      if (rolFinal && await store.pinEnUso(rolFinal, pin, id)) {
+        return res.status(400).json({ error: 'Ese PIN ya lo usa alguien de ese rol. Elige otro.' });
+      }
+    }
+    res.json({ success: true, usuario: await store.usuarioUpdate(id, req.body || {}) });
+  }
   catch (e) { res.status(errorHttp(e)).json({ error: errorUsuario(e) }); }
 });
 

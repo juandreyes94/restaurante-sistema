@@ -51,27 +51,21 @@ function sesionExpirada(res) {
 }
 
 // ── Login ──
-// Patrón de POS: tocas tu nombre y marcas tu PIN. Escribir un correo en una
-// tablet a media hora pico es inviable, por eso no se usa email/contraseña.
+// Patrón de POS: eliges tu rol y marcas tu PIN. Nada de correo y contraseña:
+// escribirlos en una tablet a hora pico es inviable.
+//
+// El PIN identifica a la persona dentro de su rol, así que tampoco hay que
+// buscarse en una lista de nombres — un paso menos, y de paso la pantalla de
+// entrada deja de publicar quién trabaja aquí.
 let _rolesPagina = [];
 let _onStart = () => {};
-let _selRole = null;      // pestaña de rol elegida (filtra la lista de gente)
-let _selUsuario = null;   // persona elegida
-let _usuarios = [];
-
-const escAuth = (v) => String(v ?? '').replace(/[&<>"']/g, c =>
-  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+let _selRole = null;      // pestaña de rol elegida
 
 function pickRole(r) {
   _selRole = r;
-  _selUsuario = null;
   document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === r));
-  renderUsuarios();
-}
-
-function pickUsuario(id) {
-  _selUsuario = _usuarios.find(u => u.id === id) || null;
-  renderUsuarios();
+  const err = document.getElementById('loginErr');
+  if (err) err.textContent = '';
   document.getElementById('pinInput')?.focus();
 }
 
@@ -84,46 +78,6 @@ function renderRoleTabs() {
      </button>`).join('');
 }
 
-function renderUsuarios() {
-  const box = document.getElementById('userList');
-  if (!box) return;
-  const gente = _usuarios.filter(u => u.rol === _selRole);
-  const pin = document.getElementById('pinRow');
-
-  if (!gente.length) {
-    box.innerHTML = `<p class="login-vacio">No hay nadie registrado como ${escAuth(NOMBRE_ROL[_selRole] || _selRole)}.</p>`;
-    if (pin) pin.style.display = 'none';
-    return;
-  }
-  box.innerHTML = gente.map(u =>
-    `<button class="user-chip${_selUsuario?.id === u.id ? ' active' : ''}" onclick="pickUsuario(${u.id})">
-       ${escAuth(u.nombre)}
-     </button>`).join('');
-  if (pin) pin.style.display = _selUsuario ? 'block' : 'none';
-}
-
-async function cargarUsuarios() {
-  try {
-    const r = await fetch('/usuarios/activos');
-    _usuarios = await r.json();
-    if (!Array.isArray(_usuarios)) _usuarios = [];
-  } catch { _usuarios = []; }
-
-  if (!_usuarios.length) {
-    const box = document.getElementById('userList');
-    if (box) box.innerHTML = `<p class="login-vacio">No hay usuarios creados todavía.<br/>
-      Córrele <code>node scripts/crear-usuarios.js</code> al servidor.</p>`;
-    return;
-  }
-  // Si en esta pantalla no hay nadie del rol por defecto, abrir en uno que sí tenga
-  if (!_usuarios.some(u => u.rol === _selRole)) {
-    const alt = ROLES.map(r => r.id).find(r => _usuarios.some(u => u.rol === r));
-    if (alt) _selRole = alt;
-  }
-  renderRoleTabs();
-  renderUsuarios();
-}
-
 // A dónde va este rol: se queda si la pantalla lo admite, si no a la suya.
 function routeTo(role) {
   if (_rolesPagina.includes(role)) _onStart();
@@ -134,11 +88,11 @@ async function doLogin() {
   const input = document.getElementById('pinInput');
   const err = document.getElementById('loginErr');
   if (err) err.textContent = '';
-  if (!_selUsuario) { if (err) err.textContent = 'Elige tu nombre primero'; return; }
+  if (!_selRole) { if (err) err.textContent = 'Elige primero dónde vas a trabajar'; return; }
   try {
     const res = await fetch('/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario_id: _selUsuario.id, pin: input.value.trim() }),
+      body: JSON.stringify({ rol: _selRole, pin: input.value.trim() }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'PIN incorrecto');
@@ -157,7 +111,8 @@ async function doLogin() {
 function mostrarLogin() {
   const ov = document.getElementById('loginOverlay');
   if (ov) ov.style.display = 'flex';
-  cargarUsuarios();
+  renderRoleTabs();
+  document.getElementById('pinInput')?.focus();
 }
 
 function initAuth({ roles, onStart, defaultRole }) {

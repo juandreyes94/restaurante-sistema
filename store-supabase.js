@@ -335,6 +335,33 @@ async function verificarPin(usuarioId, pin) {
   return { id: u.id, nombre: u.nombre, rol: u.rol };
 }
 
+// El PIN por sí solo identifica a la persona dentro de su rol: no hay que
+// elegir el nombre en una lista, se marca el código y listo. Por eso el PIN
+// tiene que ser único dentro del rol (ver pinEnUso): si dos personas de cocina
+// tuvieran el mismo, la segunda no podría entrar nunca.
+async function verificarPinPorRol(rol, pin) {
+  const clave = String(pin || '');
+  if (!clave) return null;
+  const { data } = await supa.from('usuarios')
+    .select('id,nombre,rol,pin_hash').eq('rol', rol).eq('activo', true).order('id');
+  for (const u of data || []) {
+    if (bcrypt.compareSync(clave, u.pin_hash)) {
+      return { id: u.id, nombre: u.nombre, rol: u.rol };
+    }
+  }
+  return null;
+}
+
+// ¿Ya hay alguien en ese rol usando este PIN? Los hashes de bcrypt no se
+// pueden comparar en SQL (cada uno lleva su propia sal), así que toca
+// recorrer. Son pocas personas por rol: no es un problema.
+async function pinEnUso(rol, pin, exceptoId = null) {
+  const clave = String(pin || '');
+  if (!clave) return false;
+  const { data } = await supa.from('usuarios').select('id,pin_hash').eq('rol', rol);
+  return (data || []).some(u => u.id !== exceptoId && bcrypt.compareSync(clave, u.pin_hash));
+}
+
 async function usuarioAdd({ nombre, rol, pin }) {
   const { data, error } = await supa.from('usuarios').insert({
     nombre, rol, pin_hash: bcrypt.hashSync(String(pin), 10), activo: true,
@@ -434,7 +461,8 @@ module.exports = {
   // Imágenes
   uploadImagen,
   // Usuarios
-  usuariosActivos, usuarios, verificarPin, usuarioAdd, usuarioUpdate,
+  usuariosActivos, usuarios, verificarPin, verificarPinPorRol, pinEnUso,
+  usuarioAdd, usuarioUpdate,
   // Compatibilidad: el catálogo ahora vive en la BD, no se siembra desde el código
   ensureCatalog: () => {},
   save: () => {},
