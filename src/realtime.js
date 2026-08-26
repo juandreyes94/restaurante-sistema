@@ -39,10 +39,14 @@
     }
 
     if (!cfg.anonKey) {
-      console.error('Falta SUPABASE_ANON_KEY: las pantallas no recibirán avisos en vivo.');
-      aviso(onClose);
-      // Sin canal no hay avisos, pero al menos que se vea el estado actual.
-      return cargarEstadoInicial(onMessage).catch(() => {});
+      console.warn('Sin SUPABASE_ANON_KEY: la pantalla funciona, pero no recibirá avisos en vivo.');
+      // Sin canal no hay avisos, pero la pantalla sirve igual: se carga el
+      // estado por HTTP. Ojo con el orden — avisar onClose aquí dejaba el
+      // overlay de reconexión encima para siempre, tapando los pedidos que sí
+      // se habían cargado. Solo se avisa el cierre si la carga falla de verdad.
+      return cargarEstadoInicial(onMessage)
+        .then(() => aviso(() => onOpen && onOpen({ enVivo: false })))
+        .catch(() => aviso(onClose));
     }
 
     const cliente = window.supabase.createClient(cfg.url, cfg.anonKey, {
@@ -58,7 +62,7 @@
       .subscribe((estado) => {
         if (estado === 'SUBSCRIBED') {
           cargarEstadoInicial(onMessage)
-            .then(() => aviso(onOpen))
+            .then(() => aviso(() => onOpen && onOpen({ enVivo: true })))
             .catch(() => aviso(onClose));
         } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
           aviso(onClose);

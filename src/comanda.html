@@ -79,6 +79,8 @@
     }
     .status-dot.connected { background: #7ef0a5; box-shadow: 0 0 10px #7ef0a5; }
     .status-dot.error { background: #1f2430; }
+    /* Hay datos en pantalla, pero no llegan avisos de pedidos nuevos. */
+    .status-dot.warn { background: var(--orange); box-shadow: 0 0 10px var(--orange); }
     .status-label { font-size: 0.72rem; color: rgba(255,255,255,0.85); letter-spacing: 0.02em; }
 
     .header-right { display: flex; align-items: center; gap: 0.85rem; }
@@ -684,8 +686,11 @@
 
     function connect() {
       RT.connect({
-        onOpen: () => {
-          setStatus('connected', 'En línea');
+        onOpen: ({ enVivo = true } = {}) => {
+          // enVivo=false: hay datos, pero sin canal de avisos. La pantalla se
+          // usa igual; lo que no llega solo son los pedidos nuevos, así que se
+          // dice tal cual en vez de anunciar "En línea".
+          setStatus(enVivo ? 'connected' : 'warn', enVivo ? 'En línea' : 'Sin avisos — recarga para ver nuevos');
           document.getElementById('reconnectOverlay').style.display = 'none';
           clearTimeout(reconnectTimer);
         },
