@@ -3,7 +3,10 @@ const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const os = require('os');
-const store = require('./store-supabase');
+// Supabase es el motor establecido. STORE=local levanta el sistema contra
+// data/db.json para poder navegarlo y trabajar en las pantallas cuando la base
+// no está disponible (p. ej. el proyecto pausado por inactividad).
+const store = require(process.env.STORE === 'local' ? './store-local' : './store-supabase');
 const { broadcast } = require('./realtime-server');
 const { factus: factusConfig, jwtSecret, jwtEsDeDesarrollo, supabase: supaCfg } = require('./config');
 
@@ -51,7 +54,12 @@ if (jwtEsDeDesarrollo) {
 // La anon key es pública por diseño (va al cliente igual); se sirve desde aquí
 // para no tenerla escrita a mano en cada HTML ni versionada en el repo.
 app.get('/realtime-config', (req, res) => {
-  res.json({ url: supaCfg.url, anonKey: supaCfg.anonKey || null });
+  // En modo local no hay canal de Supabase al que suscribirse. Sin anonKey, el
+  // navegador toma la rama de respaldo de src/realtime.js: pide el estado por
+  // HTTP y pinta la pantalla. Si se manda la clave, se queda esperando un
+  // SUBSCRIBED que nunca llega y la comanda no carga nunca.
+  const local = process.env.STORE === 'local';
+  res.json({ url: supaCfg.url, anonKey: local ? null : (supaCfg.anonKey || null) });
 });
 
 // Login: usuario y contraseña. El rol sale de la cuenta, no se elige al
