@@ -4,3 +4,4 @@ supabase.config.js
 factus.config.js
 
 .vercel
+.claude/
