@@ -11,14 +11,16 @@
 //    <script src="auth.js"></script>
 //    initAuth({ roles: ['cocina','admin'], onStart: startApp });
 //
-//  · roles   → qué roles puede USAR esta pantalla. A los demás se les manda
-//              a la suya (HOME), según el rol que traiga su cuenta.
+//  · roles   → qué roles puede USAR esta pantalla, una vez dentro. Ojo: que
+//              la admita no la vuelve su pantalla de entrada — para eso está
+//              HOME. A quien no la admita se le muestra el login.
 //  · onStart → se llama cuando el rol sí puede quedarse aquí.
 // ─────────────────────────────────────────────────────────────
 
 const AUTH_KEY = 'coraje_auth';
 
-// Pantalla propia de cada rol: a dónde va al entrar si no puede quedarse aquí.
+// Pantalla propia de cada rol: donde aterriza al entrar, sin importar por cuál
+// haya llegado (el linktree manda a todos a mesero.html).
 const HOME = { mesero: 'mesero.html', cocina: 'comanda.html', admin: 'admin.html' };
 const NOMBRE_ROL = { mesero: 'Mesero', cocina: 'Cocina', admin: 'Administrador' };
 
@@ -56,10 +58,33 @@ function sesionExpirada(res) {
 let _rolesPagina = [];
 let _onStart = () => {};
 
-// A dónde va este rol: se queda si la pantalla lo admite, si no a la suya.
+// Nombre del archivo que se está viendo ('mesero.html', 'admin.html'...).
+function paginaActual() {
+  return location.pathname.split('/').pop() || 'index.html';
+}
+
+// admin.html embebe recetas.html e inventario.html en un iframe. Redirigir
+// desde ahí metería una pantalla dentro de otra.
+function embebida() {
+  try { return window.top !== window.self; } catch { return true; }
+}
+
+// A dónde va este rol AL ENTRAR: siempre a su pantalla.
+//
+// Antes se quedaba en la página actual si esta admitía su rol. Pero que una
+// pantalla tolere un rol no la vuelve su sitio: mesero.html y comanda.html
+// admiten al admin a propósito, para que pueda cubrir un turno. El resultado
+// era que el admin entraba por el "Acceso personal" del linktree — que apunta
+// a mesero.html — y aterrizaba en la pantalla de meseros en vez de la suya.
+//
+// Esto corre solo al hacer login. Con la sesión ya abierta initAuth deja pasar
+// a cualquier pantalla que el rol admita, así que el admin sigue pudiendo
+// abrir la comanda o el mesero desde los enlaces de su panel.
 function routeTo(role) {
-  if (_rolesPagina.includes(role)) _onStart();
-  else location.href = HOME[role] || 'comanda.html';
+  const home = HOME[role] || 'comanda.html';
+  if (embebida() && _rolesPagina.includes(role)) return _onStart();
+  if (paginaActual() === home) return _onStart();
+  location.href = home;
 }
 
 async function doLogin() {

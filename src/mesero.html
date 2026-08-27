@@ -663,7 +663,7 @@
       setTimeout(() => { t.style.transition = 'opacity 0.3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
     }
 
-    initAuth({ roles:['mesero','admin'], defaultRole:'mesero', onStart:startApp });
+    initAuth({ roles:['mesero','admin'], onStart:startApp });
   </script>
 </body>
 </html>
