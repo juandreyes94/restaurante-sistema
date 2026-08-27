@@ -13,15 +13,19 @@
 //
 //  · roles   → qué roles puede USAR esta pantalla, una vez dentro. Ojo: que
 //              la admita no la vuelve su pantalla de entrada — para eso está
-//              HOME. A quien no la admita se le muestra el login.
+//              el `home` que manda el login. A quien no la admita se le
+//              muestra el login.
 //  · onStart → se llama cuando el rol sí puede quedarse aquí.
 // ─────────────────────────────────────────────────────────────
 
 const AUTH_KEY = 'coraje_auth';
 
-// Pantalla propia de cada rol: donde aterriza al entrar, sin importar por cuál
-// haya llegado (el linktree manda a todos a mesero.html).
-const HOME = { mesero: 'mesero.html', cocina: 'comanda.html', admin: 'admin.html' };
+// La pantalla de entrada de cada rol ya no se escribe aquí: la manda el
+// servidor en la respuesta del login (HOME_ROL en server.js) y se guarda con
+// la sesión. El mismo sitio que decide el rol decide a dónde va, así que no
+// hay dos copias de la regla que se puedan desincronizar.
+
+// Solo para mostrar en pantalla.
 const NOMBRE_ROL = { mesero: 'Mesero', cocina: 'Cocina', admin: 'Administrador' };
 
 function getAuth() {
@@ -80,8 +84,10 @@ function embebida() {
 // Esto corre solo al hacer login. Con la sesión ya abierta initAuth deja pasar
 // a cualquier pantalla que el rol admita, así que el admin sigue pudiendo
 // abrir la comanda o el mesero desde los enlaces de su panel.
-function routeTo(role) {
-  const home = HOME[role] || 'comanda.html';
+function routeTo(role, home) {
+  // Un servidor anterior a este cambio no manda `home`. Sin destino, lo
+  // seguro es quedarse si la pantalla admite el rol.
+  if (!home) return _rolesPagina.includes(role) ? _onStart() : location.reload();
   if (embebida() && _rolesPagina.includes(role)) return _onStart();
   if (paginaActual() === home) return _onStart();
   location.href = home;
@@ -103,9 +109,10 @@ async function doLogin() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'PIN incorrecto');
     localStorage.setItem(AUTH_KEY, JSON.stringify({
-      role: data.role, token: data.token, nombre: data.nombre, usuario_id: data.usuario_id,
+      role: data.role, home: data.home, token: data.token, nombre: data.nombre,
+      usuario_id: data.usuario_id,
     }));
-    routeTo(data.role);
+    routeTo(data.role, data.home);
   } catch (e) {
     input.classList.add('err');
     if (err) err.textContent = e.message || 'PIN incorrecto';
@@ -124,7 +131,7 @@ function mostrarLogin(ajena) {
 
   const err = document.getElementById('loginErr');
   if (ajena && err) {
-    const suya = HOME[ajena.role];
+    const suya = ajena.home;
     err.innerHTML =
       `Hay una sesión abierta de <b>${escAuth(ajena.nombre)}</b> ` +
       `(${escAuth(NOMBRE_ROL[ajena.role] || ajena.role)}), que no tiene acceso a esta pantalla. ` +

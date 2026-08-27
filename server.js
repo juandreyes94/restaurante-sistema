@@ -46,6 +46,17 @@ app.use(express.static(path.join(__dirname, 'src')));
 const JWT_SECRET = jwtSecret;
 const JWT_HORAS = 12;   // un turno largo
 
+// Pantalla de entrada de cada rol. Vive aquí, del lado del servidor, porque es
+// el mismo sitio que decide el rol: el login responde a dónde va cada quien y
+// el navegador solo obedece. Antes el mapa estaba escrito a mano en auth.js, y
+// una regla duplicada en el cliente es una regla que se puede desincronizar.
+//
+// Ojo: esto es a dónde aterrizas, no a qué tienes derecho. El permiso real lo
+// impone requireRole en cada ruta de la API, que es donde no se puede hacer
+// trampa. Los roles están restringidos por CHECK en la tabla usuarios, así que
+// el mapa siempre acierta.
+const HOME_ROL = { mesero: 'mesero.html', cocina: 'comanda.html', admin: 'admin.html' };
+
 if (jwtEsDeDesarrollo) {
   console.warn('⚠️  JWT_SECRET no está definido: usando uno de desarrollo. Defínelo antes de desplegar.');
 }
@@ -80,7 +91,7 @@ app.post('/login', async (req, res) => {
     const token = jwt.sign(
       { uid: u.id, nombre: u.nombre, rol: u.rol },
       JWT_SECRET, { expiresIn: `${JWT_HORAS}h` });
-    res.json({ ok: true, role: u.rol, nombre: u.nombre, usuario_id: u.id, token });
+    res.json({ ok: true, role: u.rol, home: HOME_ROL[u.rol], nombre: u.nombre, usuario_id: u.id, token });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
