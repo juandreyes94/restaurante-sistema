@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tarjeta Coraje — Regístrate</title>
+  <meta name="description" content="Acumula sellos con cada compra y reclama tu premio." />
+  <meta name="robots" content="noindex" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #FB3E2C;
+      --cream:  #F2DDCD;
+      --dark:   #111;
+      --muted:  #7a6f68;
+    }
+    body {
+      font-family: 'Montserrat', Arial, sans-serif;
+      background: var(--cream);
+      color: var(--dark);
+      min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem 1.1rem;
+    }
+    .caja { width: 100%; max-width: 27rem; }
+
+    header { text-align: center; margin-bottom: 1.6rem; }
+    .marca {
+      font-weight: 900; font-size: 1.6rem; letter-spacing: -0.02em;
+      color: var(--orange); text-transform: uppercase;
+    }
+    h1 { font-size: 1.5rem; font-weight: 900; line-height: 1.15; margin-top: 0.7rem; }
+    .sub { color: var(--muted); font-size: 0.92rem; margin-top: 0.5rem; line-height: 1.5; }
+
+    form {
+      background: #fff; border-radius: 1.1rem; padding: 1.5rem 1.3rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 12px 32px rgba(0,0,0,0.07);
+    }
+    label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .campo + .campo { margin-top: 1rem; }
+    input[type=text], input[type=tel], input[type=email] {
+      width: 100%; padding: 0.85rem 0.9rem; font: inherit; font-size: 1rem;
+      border: 2px solid #e6ddd4; border-radius: 0.7rem; background: #fdfbf9;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    input:focus-visible {
+      outline: none; border-color: var(--orange); background: #fff;
+    }
+    input.err { border-color: #d92d20; }
+    .opcional { color: var(--muted); font-weight: 500; }
+
+    .permiso {
+      display: flex; gap: 0.65rem; align-items: flex-start;
+      margin-top: 1.2rem; padding-top: 1.2rem; border-top: 1px solid #f0e8e0;
+    }
+    .permiso input { margin-top: 0.15rem; width: 1.15rem; height: 1.15rem; accent-color: var(--orange); flex-shrink: 0; }
+    .permiso label { font-size: 0.78rem; font-weight: 500; color: var(--muted); line-height: 1.5; margin: 0; }
+
+    button {
+      width: 100%; margin-top: 1.3rem; padding: 0.95rem;
+      font: inherit; font-weight: 700; font-size: 1rem; color: #fff;
+      background: var(--orange); border: none; border-radius: 0.7rem; cursor: pointer;
+      transition: transform 0.15s ease, filter 0.2s ease;
+    }
+    button:hover:not(:disabled) { filter: brightness(1.06); }
+    button:active:not(:disabled) { transform: scale(0.985); }
+    button:disabled { opacity: 0.55; cursor: default; }
+
+    .error {
+      margin-top: 0.9rem; padding: 0.7rem 0.85rem; border-radius: 0.6rem;
+      background: #fdecea; color: #a52218; font-size: 0.85rem; line-height: 1.45;
+      display: none;
+    }
+    .error.visible { display: block; }
+
+    .ya { text-align: center; margin-top: 1.2rem; font-size: 0.85rem; color: var(--muted); }
+    .ya a { color: var(--orange); font-weight: 700; text-decoration: none; }
+    .ya a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <main class="caja">
+    <header>
+      <div class="marca">Coraje</div>
+      <h1 id="titulo">Tu tarjeta de sellos</h1>
+      <p class="sub" id="promesa">Acumula sellos con cada compra.</p>
+    </header>
+
+    <form id="form" novalidate>
+      <div class="campo">
+        <label for="nombre">Tu nombre</label>
+        <input type="text" id="nombre" autocomplete="name" enterkeyhint="next" />
+      </div>
+      <div class="campo">
+        <label for="telefono">Celular</label>
+        <input type="tel" id="telefono" autocomplete="tel" inputmode="numeric" placeholder="300 123 4567" enterkeyhint="next" />
+      </div>
+      <div class="campo">
+        <label for="email">Correo <span class="opcional">— opcional</span></label>
+        <input type="email" id="email" autocomplete="email" enterkeyhint="done" />
+      </div>
+
+      <div class="permiso">
+        <input type="checkbox" id="autoriza" />
+        <label for="autoriza">
+          Autorizo a Coraje Fast Food a guardar mi nombre, celular y correo para
+          administrar mi tarjeta de sellos y contarme de sus promociones. Puedo
+          pedir que los borren cuando quiera.
+        </label>
+      </div>
+
+      <button type="submit" id="btn">Crear mi tarjeta</button>
+      <div class="error" id="error"></div>
+    </form>
+
+    <p class="ya">¿Ya tienes tarjeta? <a href="tarjeta.html">Ábrela aquí</a></p>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const error = $('error');
+
+    function fallar(msg, campo) {
+      error.textContent = msg;
+      error.classList.add('visible');
+      if (campo) { campo.classList.add('err'); campo.focus(); }
+    }
+    function limpiar() {
+      error.classList.remove('visible');
+      for (const c of document.querySelectorAll('input')) c.classList.remove('err');
+    }
+
+    // Las condiciones del programa las manda el servidor: si el restaurante
+    // cambia la promoción, esta pantalla lo dice sin que nadie la edite.
+    fetch('/fidelizacion/reglas').then(r => r.json()).then(r => {
+      $('promesa').textContent =
+        `Junta ${r.sellos_por_premio} sellos y reclama: ${r.premio_descripcion.toLowerCase()}.`;
+    }).catch(() => {});
+
+    $('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      limpiar();
+      const nombre = $('nombre').value.trim();
+      const telefono = $('telefono').value.trim();
+      if (!nombre) return fallar('Escribe tu nombre.', $('nombre'));
+      if (telefono.replace(/\D/g, '').length < 7) return fallar('Escribe un celular válido.', $('telefono'));
+      if (!$('autoriza').checked) return fallar('Necesitamos tu autorización para guardar tus datos.', null);
+
+      $('btn').disabled = true;
+      $('btn').textContent = 'Creando…';
+      try {
+        const res = await fetch('/clientes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, telefono, email: $('email').value.trim(), autoriza_datos: true }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'No pudimos crear tu tarjeta');
+        // Su tarjeta queda guardada en el celular: la próxima vez entra sola.
+        try { localStorage.setItem('coraje_tarjeta', data.codigo); } catch {}
+        location.href = 'tarjeta.html?c=' + encodeURIComponent(data.codigo) + (data.yaExistia ? '&ya=1' : '&nueva=1');
+      } catch (err) {
+        fallar(err.message);
+        $('btn').disabled = false;
+        $('btn').textContent = 'Crear mi tarjeta';
+      }
+    });
+  </script>
+</body>
+</html>
