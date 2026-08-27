@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────
 const { createClient } = require('@supabase/supabase-js');
 const cfg = require('./config').supabase;
+const { nuevoCodigo, normalizarCodigo, normalizarTelefono } = require('./codigo-cliente');
 
 const supa = createClient(cfg.url, cfg.serviceRoleKey, { auth: { persistSession: false } });
 
@@ -441,6 +442,125 @@ async function refreshProductosAgotados() {
   await supa.rpc('recalcular_agotados');
 }
 
+
+// ── Fidelización: tarjeta de sellos ────────────────────────────
+// Los clientes viven aparte del personal (ver sql/05_fidelizacion.sql).
+
+// Las reglas del programa las manda la fila de config, no el código: el
+// restaurante cambia la promoción sin desplegar nada.
+async function reglasFidelizacion() {
+  const { data, error } = await supa.from('config')
+    .select('sellos_por_premio, sellos_por_compra, premio_descripcion, fidelizacion_activa')
+    .eq('id', 1).single();
+  if (error) throw error;
+  return data;
+}
+
+// El saldo lo calcula la BD (función sellos_disponibles): sumar en el
+// servidor obligaría a traerse todo el historial de la persona.
+async function clienteSaldo(clienteId) {
+  const { data, error } = await supa.rpc('sellos_disponibles', { p_cliente_id: clienteId });
+  if (error) throw error;
+  return data ?? 0;
+}
+
+async function clientes() {
+  const { data, error } = await supa.from('clientes')
+    .select('*').order('creado_en', { ascending: false });
+  if (error) throw error;
+  // Un RPC por cliente sería una consulta por fila. Se traen los movimientos
+  // de una vez y se cuadra el saldo aquí.
+  const [{ data: s }, { data: c }] = await Promise.all([
+    supa.from('sellos').select('cliente_id, cantidad'),
+    supa.from('canjes').select('cliente_id, sellos_usados'),
+  ]);
+  const saldo = new Map();
+  for (const r of s || []) saldo.set(r.cliente_id, (saldo.get(r.cliente_id) || 0) + r.cantidad);
+  for (const r of c || []) saldo.set(r.cliente_id, (saldo.get(r.cliente_id) || 0) - r.sellos_usados);
+  return (data || []).map(cl => ({ ...cl, sellos: saldo.get(cl.id) || 0 }));
+}
+
+async function clientePorCodigo(codigo) {
+  const { data, error } = await supa.from('clientes')
+    .select('*').eq('codigo', normalizarCodigo(codigo)).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+async function clientePorTelefono(telefono) {
+  const { data, error } = await supa.from('clientes')
+    .select('*').eq('telefono', normalizarTelefono(telefono)).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+async function clienteAdd({ nombre, telefono, email = '', autoriza_datos = false }) {
+  // Reintento por si el código aleatorio choca con uno existente. Con 3.8e11
+  // combinaciones es rarísimo, pero el unique de la tabla lo haría fallar y
+  // el cliente vería un error sin ninguna culpa suya.
+  for (let intento = 0; intento < 5; intento++) {
+    const { data, error } = await supa.from('clientes').insert({
+      codigo: nuevoCodigo(),
+      nombre: String(nombre || '').trim(),
+      telefono: normalizarTelefono(telefono),
+      email: String(email || '').trim(),
+      autoriza_datos: !!autoriza_datos,
+      autorizado_en: autoriza_datos ? new Date().toISOString() : null,
+    }).select().single();
+    if (!error) return data;
+    // 23505 en `codigo` es choque de código; en `telefono` es que la persona
+    // ya está registrada, y eso sí hay que reportarlo.
+    if (error.code === '23505' && /codigo/.test(error.message || '')) continue;
+    throw error;
+  }
+  throw new Error('No se pudo generar un código de tarjeta libre');
+}
+
+async function clienteUpdate(id, fields) {
+  const patch = {};
+  for (const k of ['nombre', 'email', 'activo']) if (k in fields) patch[k] = fields[k];
+  if ('telefono' in fields) patch.telefono = normalizarTelefono(fields.telefono);
+  const { data, error } = await supa.from('clientes')
+    .update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Historial visible en la tarjeta: cuándo ganó cada sello y cuándo canjeó.
+async function clienteHistorial(clienteId) {
+  const [{ data: s }, { data: c }] = await Promise.all([
+    supa.from('sellos').select('*').eq('cliente_id', clienteId).order('creado_en', { ascending: false }).limit(50),
+    supa.from('canjes').select('*').eq('cliente_id', clienteId).order('creado_en', { ascending: false }).limit(50),
+  ]);
+  return [
+    ...(s || []).map(r => ({ tipo: 'sello', cantidad: r.cantidad, pedido_id: r.pedido_id, usuario: r.usuario, fecha: r.creado_en })),
+    ...(c || []).map(r => ({ tipo: 'canje', cantidad: r.sellos_usados, premio: r.premio, pedido_id: r.pedido_id, usuario: r.usuario, fecha: r.creado_en })),
+  ].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+}
+
+async function selloDar({ clienteId, pedidoId = null, cantidad = 1, usuarioId = null, usuario = '' }) {
+  const { data, error } = await supa.from('sellos').insert({
+    cliente_id: clienteId, pedido_id: pedidoId, cantidad,
+    usuario_id: usuarioId, usuario,
+  }).select().single();
+  // El índice único sobre pedido_id es lo que impide sellar dos veces el mismo
+  // pedido: el doble clic del mesero llega aquí y rebota.
+  if (error) throw error;
+  return data;
+}
+
+async function canjear({ clienteId, pedidoId = null, usuarioId = null, usuario = '' }) {
+  // La comprobación de saldo y la escritura van juntas dentro de la función
+  // SQL: hacerlas por separado dejaría entregar dos premios con los sellos
+  // de uno si dos meseros canjean a la vez.
+  const { data, error } = await supa.rpc('canjear_premio', {
+    p_cliente_id: clienteId, p_pedido_id: pedidoId,
+    p_usuario_id: usuarioId, p_usuario: usuario,
+  });
+  if (error) throw error;
+  return { restantes: data ?? 0 };
+}
+
 module.exports = {
   init,
   // Lecturas (async: van a la BD, no a memoria)
@@ -457,6 +577,9 @@ module.exports = {
   // Usuarios
   usuariosActivos, usuarios, verificarPin, verificarCredenciales,
   usuarioAdd, usuarioUpdate,
+  // Fidelización
+  reglasFidelizacion, clientes, clientePorCodigo, clientePorTelefono,
+  clienteAdd, clienteUpdate, clienteSaldo, clienteHistorial, selloDar, canjear,
   // Compatibilidad: el catálogo ahora vive en la BD, no se siembra desde el código
   ensureCatalog: () => {},
   save: () => {},

@@ -9,6 +9,7 @@ const os = require('os');
 const store = require(process.env.STORE === 'local' ? './store-local' : './store-supabase');
 const { broadcast } = require('./realtime-server');
 const { factus: factusConfig, jwtSecret, jwtEsDeDesarrollo, supabase: supaCfg } = require('./config');
+const { normalizarTelefono } = require('./codigo-cliente');
 
 // ── Factus token cache (requiere Node 18+ para fetch nativo) ──
 let _factusToken = null;
@@ -500,6 +501,143 @@ app.post('/facturar/:id', requireRole('cocina', 'admin'), async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Fidelización: tarjeta de sellos ────────────────────────────
+//
+// Dos rutas públicas y el resto protegidas. Las públicas lo son a propósito:
+// el cliente no tiene cuenta en el POS ni debería tenerla, así que su tarjeta
+// se identifica con el código aleatorio que lleva encima. No es un secreto
+// fuerte, pero solo expone el nombre y los sellos de esa persona, y sin él no
+// se puede enumerar nada.
+
+app.get('/fidelizacion/reglas', async (req, res) => {
+  try { res.json(await store.reglasFidelizacion()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Registro del cliente. Sin autorización de datos no se guarda: en Colombia
+// hay que poder demostrar que la persona la dio, y cuándo.
+app.post('/clientes', async (req, res) => {
+  const { nombre, telefono, email, autoriza_datos } = req.body || {};
+  if (!String(nombre || '').trim()) return res.status(400).json({ error: 'Escribe tu nombre' });
+  const tel = normalizarTelefono(telefono);
+  if (tel.length < 7) return res.status(400).json({ error: 'Escribe un teléfono válido' });
+  if (!autoriza_datos) {
+    return res.status(400).json({ error: 'Necesitamos tu autorización para guardar tus datos' });
+  }
+  try {
+    const cliente = await store.clienteAdd({ nombre, telefono: tel, email, autoriza_datos: true });
+    res.json({ success: true, codigo: cliente.codigo, nombre: cliente.nombre });
+  } catch (e) {
+    if (e && e.code === '23505') {
+      // Ya registrado: no es un error, es que vuelve. Se le devuelve su código
+      // para que abra su tarjeta en vez de quedarse trancado.
+      const ya = await store.clientePorTelefono(tel).catch(() => null);
+      if (ya) return res.json({ success: true, yaExistia: true, codigo: ya.codigo, nombre: ya.nombre });
+      return res.status(400).json({ error: 'Ese teléfono ya está registrado' });
+    }
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// La tarjeta que ve el cliente.
+app.get('/tarjeta/:codigo', async (req, res) => {
+  try {
+    const cliente = await store.clientePorCodigo(req.params.codigo);
+    if (!cliente || !cliente.activo) return res.status(404).json({ error: 'Tarjeta no encontrada' });
+    const [sellos, reglas, historial] = await Promise.all([
+      store.clienteSaldo(cliente.id),
+      store.reglasFidelizacion(),
+      store.clienteHistorial(cliente.id),
+    ]);
+    // Solo lo que la tarjeta pinta. El teléfono y el email no salen: el
+    // enlace puede terminar reenviado por WhatsApp.
+    res.json({
+      nombre: cliente.nombre, codigo: cliente.codigo, sellos, reglas, historial,
+      completadas: Math.floor(sellos / reglas.sellos_por_premio),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Buscar en el mostrador: por código escaneado, o por teléfono si no lo trae.
+app.get('/clientes/buscar', requireRole('mesero', 'cocina', 'admin'), async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.status(400).json({ error: 'Falta qué buscar' });
+  try {
+    const soloDigitos = q.replace(/\D/g, '');
+    const cliente = soloDigitos.length >= 7
+      ? await store.clientePorTelefono(q)
+      : await store.clientePorCodigo(q);
+    if (!cliente) return res.status(404).json({ error: 'No encontramos esa tarjeta' });
+    const [sellos, reglas] = await Promise.all([
+      store.clienteSaldo(cliente.id), store.reglasFidelizacion(),
+    ]);
+    res.json({
+      id: cliente.id, nombre: cliente.nombre, codigo: cliente.codigo,
+      telefono: cliente.telefono, activo: cliente.activo,
+      sellos, puedeCanjear: sellos >= reglas.sellos_por_premio, reglas,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Poner sello. El pedidoId es lo que impide sellar dos veces la misma venta.
+app.post('/clientes/:codigo/sello', requireRole('mesero', 'admin'), async (req, res) => {
+  try {
+    const reglas = await store.reglasFidelizacion();
+    if (!reglas.fidelizacion_activa) {
+      return res.status(400).json({ error: 'El programa de sellos está desactivado' });
+    }
+    const cliente = await store.clientePorCodigo(req.params.codigo);
+    if (!cliente || !cliente.activo) return res.status(404).json({ error: 'Tarjeta no encontrada' });
+    const pedidoId = req.body && req.body.pedidoId != null ? Number(req.body.pedidoId) : null;
+    const cantidad = Number(req.body && req.body.cantidad) || reglas.sellos_por_compra;
+    await store.selloDar({
+      clienteId: cliente.id, pedidoId, cantidad,
+      usuarioId: req.usuario.id, usuario: req.usuario.nombre,
+    });
+    const sellos = await store.clienteSaldo(cliente.id);
+    res.json({
+      success: true, nombre: cliente.nombre, sellos,
+      puedeCanjear: sellos >= reglas.sellos_por_premio, reglas,
+    });
+  } catch (e) {
+    if (e && e.code === '23505') return res.status(400).json({ error: 'Ese pedido ya tenía sello' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Canjear. El descuento de sellos lo hace la BD en una sola transacción, así
+// que dos meseros a la vez no entregan dos premios con los sellos de uno.
+app.post('/clientes/:codigo/canjear', requireRole('mesero', 'admin'), async (req, res) => {
+  try {
+    const cliente = await store.clientePorCodigo(req.params.codigo);
+    if (!cliente || !cliente.activo) return res.status(404).json({ error: 'Tarjeta no encontrada' });
+    const pedidoId = req.body && req.body.pedidoId != null ? Number(req.body.pedidoId) : null;
+    const r = await store.canjear({
+      clienteId: cliente.id, pedidoId,
+      usuarioId: req.usuario.id, usuario: req.usuario.nombre,
+    });
+    const reglas = await store.reglasFidelizacion();
+    res.json({ success: true, nombre: cliente.nombre, sellos: r.restantes, premio: reglas.premio_descripcion });
+  } catch (e) {
+    if (e && e.code === 'P0001') return res.status(400).json({ error: e.message });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Listado y edición: del admin.
+app.get('/clientes', requireRole('admin'), async (req, res) => {
+  try { res.json(await store.clientes()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/clientes/:id', requireRole('admin'), async (req, res) => {
+  try { res.json({ success: true, cliente: await store.clienteUpdate(parseInt(req.params.id), req.body || {}) }); }
+  catch (e) {
+    if (e && e.code === '23505') return res.status(400).json({ error: 'Ese teléfono ya está registrado' });
+    res.status(500).json({ error: e.message });
   }
 });
 

@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { nuevoCodigo, normalizarCodigo, normalizarTelefono } = require('./codigo-cliente');
 
 const DATA_DIR  = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
@@ -17,6 +18,8 @@ let _data = {
   orders: [], nextId: 1, products: [], nextProductId: 1,
   insumos: [], nextInsumoId: 1, recetas: [], movimientos: [],
   usuarios: [], nextUsuarioId: 1,
+  clientes: [], nextClienteId: 1, sellos: [], nextSelloId: 1, canjes: [], nextCanjeId: 1,
+  config: null,
 };
 let _timer = null;
 
@@ -34,6 +37,16 @@ function _load() {
   _data.nextInsumoId  = _data.nextInsumoId  || _data.insumos.reduce((m, i) => Math.max(m, i.id || 0), 0) + 1;
   _data.usuarios      = Array.isArray(_data.usuarios) ? _data.usuarios : [];
   _data.nextUsuarioId = _data.nextUsuarioId || _data.usuarios.reduce((m, u) => Math.max(m, u.id || 0), 0) + 1;
+  _data.clientes      = Array.isArray(_data.clientes) ? _data.clientes : [];
+  _data.sellos        = Array.isArray(_data.sellos) ? _data.sellos : [];
+  _data.canjes        = Array.isArray(_data.canjes) ? _data.canjes : [];
+  _data.nextClienteId = _data.nextClienteId || _data.clientes.reduce((m, c) => Math.max(m, c.id || 0), 0) + 1;
+  _data.nextSelloId   = _data.nextSelloId   || _data.sellos.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+  _data.nextCanjeId   = _data.nextCanjeId   || _data.canjes.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+  // Las mismas reglas por defecto que siembra sql/05_fidelizacion.sql.
+  _data.config = { sellos_por_premio: 10, sellos_por_compra: 1,
+                   premio_descripcion: 'Un producto gratis', fidelizacion_activa: true,
+                   ..._data.config };
   _seedInsumos();
   _seedUsuarios();
 }
@@ -315,6 +328,130 @@ async function uploadImagen(buffer, filename, mime) {
   return { path: ruta, url: `/${ruta}` };
 }
 
+
+// ── Fidelización: tarjeta de sellos ────────────────────────────
+// Mismo contrato que store-supabase. Lo que allá resuelven un unique y una
+// función SQL, aquí se comprueba a mano: es un solo proceso, así que no hay
+// dos escrituras compitiendo, pero las reglas tienen que ser las mismas o el
+// modo local mentiría sobre cómo se comporta el sistema real.
+
+async function reglasFidelizacion() {
+  return { ..._data.config };
+}
+
+function _saldo(clienteId) {
+  const ganados = _data.sellos.filter(s => s.cliente_id === clienteId)
+    .reduce((t, s) => t + s.cantidad, 0);
+  const usados = _data.canjes.filter(c => c.cliente_id === clienteId)
+    .reduce((t, c) => t + c.sellos_usados, 0);
+  return ganados - usados;
+}
+
+async function clienteSaldo(clienteId) { return _saldo(clienteId); }
+
+async function clientes() {
+  return _data.clientes
+    .map(c => ({ ...c, sellos: _saldo(c.id) }))
+    .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+}
+
+async function clientePorCodigo(codigo) {
+  const cod = normalizarCodigo(codigo);
+  return _data.clientes.find(c => c.codigo === cod) || null;
+}
+
+async function clientePorTelefono(telefono) {
+  const tel = normalizarTelefono(telefono);
+  return _data.clientes.find(c => c.telefono === tel) || null;
+}
+
+async function clienteAdd({ nombre, telefono, email = '', autoriza_datos = false }) {
+  const tel = normalizarTelefono(telefono);
+  // Mismo code '23505' que devolvería Postgres: server.js lo traduce al
+  // mensaje que ve el cliente, y no debería tener que saber qué motor corre.
+  if (_data.clientes.some(c => c.telefono === tel)) {
+    const e = new Error('Ese teléfono ya está registrado');
+    e.code = '23505';
+    throw e;
+  }
+  let codigo;
+  do { codigo = nuevoCodigo(); } while (_data.clientes.some(c => c.codigo === codigo));
+  const cliente = {
+    id: _data.nextClienteId++,
+    codigo,
+    nombre: String(nombre || '').trim(),
+    telefono: tel,
+    email: String(email || '').trim(),
+    autoriza_datos: !!autoriza_datos,
+    autorizado_en: autoriza_datos ? new Date().toISOString() : null,
+    activo: true,
+    creado_en: new Date().toISOString(),
+  };
+  _data.clientes.push(cliente);
+  save();
+  return cliente;
+}
+
+async function clienteUpdate(id, fields) {
+  const c = _data.clientes.find(x => x.id === id);
+  if (!c) throw new Error('Cliente no encontrado');
+  if ('telefono' in fields) {
+    const tel = normalizarTelefono(fields.telefono);
+    if (_data.clientes.some(x => x.telefono === tel && x.id !== id)) {
+      const e = new Error('Ese teléfono ya está registrado');
+      e.code = '23505';
+      throw e;
+    }
+    c.telefono = tel;
+  }
+  for (const k of ['nombre', 'email', 'activo']) if (k in fields) c[k] = fields[k];
+  save();
+  return c;
+}
+
+async function clienteHistorial(clienteId) {
+  return [
+    ..._data.sellos.filter(s => s.cliente_id === clienteId)
+      .map(s => ({ tipo: 'sello', cantidad: s.cantidad, pedido_id: s.pedido_id, usuario: s.usuario, fecha: s.creado_en })),
+    ..._data.canjes.filter(c => c.cliente_id === clienteId)
+      .map(c => ({ tipo: 'canje', cantidad: c.sellos_usados, premio: c.premio, pedido_id: c.pedido_id, usuario: c.usuario, fecha: c.creado_en })),
+  ].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 100);
+}
+
+async function selloDar({ clienteId, pedidoId = null, cantidad = 1, usuarioId = null, usuario = '' }) {
+  // El equivalente del índice único de Postgres sobre pedido_id: un pedido
+  // no sella dos veces, aunque el mesero toque el botón dos veces.
+  if (pedidoId != null && _data.sellos.some(s => s.pedido_id === pedidoId)) {
+    const e = new Error('Ese pedido ya tiene sello');
+    e.code = '23505';
+    throw e;
+  }
+  const sello = {
+    id: _data.nextSelloId++, cliente_id: clienteId, pedido_id: pedidoId,
+    cantidad, usuario_id: usuarioId, usuario, creado_en: new Date().toISOString(),
+  };
+  _data.sellos.push(sello);
+  save();
+  return sello;
+}
+
+async function canjear({ clienteId, pedidoId = null, usuarioId = null, usuario = '' }) {
+  const necesarios = _data.config.sellos_por_premio;
+  const saldo = _saldo(clienteId);
+  if (saldo < necesarios) {
+    const e = new Error(`Sellos insuficientes: tiene ${saldo}, necesita ${necesarios}`);
+    e.code = 'P0001';
+    throw e;
+  }
+  _data.canjes.push({
+    id: _data.nextCanjeId++, cliente_id: clienteId, pedido_id: pedidoId,
+    sellos_usados: necesarios, premio: _data.config.premio_descripcion,
+    usuario_id: usuarioId, usuario, creado_en: new Date().toISOString(),
+  });
+  save();
+  return { restantes: saldo - necesarios };
+}
+
 module.exports = {
   init,
   all:         () => _data.orders,
@@ -329,6 +466,8 @@ module.exports = {
   recetas, recetaSet,
   usuariosActivos, usuarios, verificarPin, verificarCredenciales,
   usuarioAdd, usuarioUpdate,
+  reglasFidelizacion, clientes, clientePorCodigo, clientePorTelefono,
+  clienteAdd, clienteUpdate, clienteSaldo, clienteHistorial, selloDar, canjear,
   uploadImagen,
   ensureCatalog: () => {},
   save,
