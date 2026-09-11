@@ -135,6 +135,42 @@
     .drawer-close { background:rgba(0,0,0,0.16); color:#fff; border:none; width:36px; height:36px; border-radius:10px; cursor:pointer; font-size:1.3rem; line-height:1; }
     .drawer-body { flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.8rem; }
     .drawer-empty { color:var(--muted); text-align:center; margin-top:3rem; font-size:0.9rem; }
+
+    /* ── FIDELIZACIÓN — sellar en el mostrador ── */
+    .fid-hint { font-size:0.82rem; color:var(--ink-soft); line-height:1.5; }
+    .fid-err { color:var(--red-dark); font-size:0.85rem; font-weight:600; }
+    .fid-row { display:flex; gap:0.5rem; }
+    .fid-row input { flex:1; min-width:0; border:1.5px solid var(--border); border-radius:11px; padding:0.72rem 0.9rem; font-family:inherit; font-size:0.95rem; color:var(--ink); background:var(--surface); outline:none; text-transform:uppercase; }
+    .fid-row input::placeholder { text-transform:none; }
+    .fid-row input:focus { border-color:var(--red); }
+    .fid-btn { border:none; border-radius:11px; padding:0.72rem 1.05rem; font-family:inherit; font-weight:700; font-size:0.88rem; cursor:pointer; background:var(--red); color:#fff; transition:background 0.15s; }
+    .fid-btn:hover { background:var(--red-dark); }
+    .fid-btn:disabled { opacity:0.55; cursor:default; }
+    .fid-btn.ghost { background:var(--surface); color:var(--ink); border:1.5px solid var(--border); }
+    .fid-btn.ghost:hover { background:var(--surface-2); }
+    .fid-btn.go { background:var(--green); }
+    .fid-btn.go:hover { background:var(--green-dark); }
+    .fid-scan { display:flex; align-items:center; justify-content:center; gap:0.5rem; width:100%; padding:0.85rem; }
+    .fid-cam { display:none; position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:1; }
+    .fid-cam.on { display:block; }
+    .fid-cam video { width:100%; height:100%; object-fit:cover; display:block; }
+    .fid-cam .mira { position:absolute; inset:18%; border:3px solid rgba(255,255,255,0.9); border-radius:16px; }
+    .fid-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:1rem; display:none; }
+    .fid-card.on { display:block; }
+    .fid-nombre { font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:0.03em; line-height:1.1; }
+    .fid-cod { font-size:0.75rem; color:var(--muted); letter-spacing:0.14em; font-weight:700; }
+    .fid-dots { display:flex; flex-wrap:wrap; gap:0.35rem; margin:0.8rem 0 0.6rem; }
+    .fid-dot { width:22px; height:22px; border-radius:50%; border:2px dashed var(--border); }
+    .fid-dot.on { border:none; background:var(--red); box-shadow:0 2px 6px rgba(251,62,44,0.35); }
+    .fid-saldo { font-size:0.88rem; font-weight:600; color:var(--ink-soft); margin-bottom:0.8rem; }
+    .fid-premio { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:11px; padding:0.6rem 0.8rem; font-size:0.84rem; font-weight:700; margin-bottom:0.8rem; }
+    .fid-acciones { display:flex; gap:0.5rem; }
+    .fid-acciones .fid-btn { flex:1; }
+    .fid-liga { display:flex; align-items:center; gap:0.6rem; background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:0.65rem 0.85rem; font-size:0.85rem; color:var(--ink-soft); }
+    .fid-liga input { width:18px; height:18px; accent-color:var(--red); flex:none; }
+    /* .field-hide se declara antes que .fid-liga, así que con la misma
+       especificidad perdería: se repite aquí para que ocultar gane. */
+    .fid-liga.field-hide { display:none; }
     .ao-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
     .ao-head { display:flex; align-items:center; justify-content:space-between; padding:0.7rem 0.9rem; border-bottom:1px solid var(--border); }
     .ao-title { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:0.03em; }
@@ -224,6 +260,10 @@
           <svg class="i" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 14h4"/></svg>
           Pedidos activos <span class="badge" id="activeBadge">0</span>
         </button>
+        <button class="active-btn field-hide" id="fidBtn" onclick="openFid()">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>
+          Tarjeta
+        </button>
         <button class="logout-btn" onclick="logout()">Salir</button>
       </div>
     </header>
@@ -297,6 +337,34 @@
     </div>
   </aside>
 
+  <!-- TARJETA DE SELLOS — buscar al cliente y sellarle la compra -->
+  <div class="drawer-bg" id="fidBg" onclick="closeFid()"></div>
+  <aside class="drawer" id="fidDrawer">
+    <div class="drawer-head">
+      <h2>Tarjeta de sellos</h2>
+      <button class="drawer-close" onclick="closeFid()">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="fid-liga field-hide" id="fidLiga">
+        <input type="checkbox" id="fidLigaChk" checked />
+        <label for="fidLigaChk">Sumar el sello al <b id="fidLigaTxt">pedido</b></label>
+      </div>
+      <div class="fid-row">
+        <input type="text" id="fidQ" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+               placeholder="Código o teléfono" onkeydown="if(event.key==='Enter')buscarCliente()" />
+        <button class="fid-btn" onclick="buscarCliente()">Buscar</button>
+      </div>
+      <button class="fid-btn ghost fid-scan" id="fidScanBtn" onclick="toggleEscaner()"></button>
+      <div class="fid-cam" id="fidCam">
+        <video id="fidVideo" playsinline muted></video>
+        <div class="mira"></div>
+      </div>
+      <div class="fid-hint" id="fidHint"></div>
+      <div class="fid-err" id="fidErr"></div>
+      <div class="fid-card" id="fidCard"></div>
+    </div>
+  </aside>
+
   <div id="toastBox"></div>
 
   <script src="auth.js"></script>
@@ -315,6 +383,7 @@
       document.getElementById('app').style.display = 'block';
       loadProductos();
       connectWS();
+      cargarReglasFid();
     }
 
     // ── Estado ──
@@ -475,6 +544,9 @@
         const data = await res.json();
         if (data.success){
           toast(editingId ? `✅ Pedido #${editingId} corregido` : `✅ Pedido #${data.id} enviado a cocina`, 'ok');
+          // Queda a mano por si el cliente tiene tarjeta: el sello se ata
+          // al pedido, y ese vínculo impide sellar dos veces una venta.
+          if (!editingId) { fidPedido = { id: data.id, cuando: Date.now() }; mostrarLiga(); }
           exitEdit();
           toggleCart(false);
         } else {
@@ -652,6 +724,269 @@
       document.getElementById('editBanner').classList.remove('on');
       document.getElementById('cartTitle').textContent = 'Pedido';
       resetOrder();
+    }
+
+    // ── Fidelización — sellar la tarjeta del cliente ──────────────
+    //
+    // El cliente llega de tres formas y las tres caen en el mismo sitio: con
+    // el QR de su tarjeta, dictando el código, o dando su teléfono cuando no
+    // trae el celular. /clientes/buscar acepta código o teléfono y normaliza
+    // los dos, así que aquí no hace falta adivinar cuál es cuál.
+    //
+    // Sobre la cámara: el navegador solo la entrega en origen seguro (https o
+    // localhost). El mesero entra por la IP de la red, donde NO la hay — por
+    // eso el código escrito no es el respaldo, es la vía principal en el
+    // salón, y el escáner es lo que se suma cuando el sitio va por https.
+
+    let fidReglas = null;    // condiciones del programa; las manda el servidor
+    let fidCliente = null;   // a quién estamos sellando
+    let fidPedido = null;    // último pedido enviado, para atarle el sello
+    let fidStream = null;    // cámara abierta, si la hay
+    let fidTimer = null;
+    let fidDetector = null;  // BarcodeDetector, o null si toca jsQR
+    let _fidCanvas = null;
+
+    // Cuánto sigue sirviendo el último pedido como destino del sello. Pasado
+    // ese rato lo más probable es que enfrente ya haya otro cliente, y atarle
+    // ese pedido sellaría la venta equivocada.
+    const FID_VENTANA = 15 * 60 * 1000;
+    const FID_SCAN_LABEL = '<svg class="i" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg> Escanear QR';
+
+    async function cargarReglasFid(){
+      try {
+        const r = await fetch('/fidelizacion/reglas');
+        fidReglas = await r.json();
+      } catch { fidReglas = null; }
+      // Si el programa está apagado, el botón no aparece: no tiene sentido
+      // ofrecer sellos que el servidor va a rechazar.
+      const activa = !!(fidReglas && fidReglas.fidelizacion_activa);
+      document.getElementById('fidBtn').classList.toggle('field-hide', !activa);
+      document.getElementById('fidScanBtn').innerHTML = FID_SCAN_LABEL;
+    }
+
+    function openFid(){
+      // Cada apertura empieza en limpio: el cliente anterior ya se fue.
+      fidCliente = null;
+      document.getElementById('fidCard').classList.remove('on');
+      fidError(''); fidHint('');
+      mostrarLiga();
+      document.getElementById('fidBg').classList.add('open');
+      document.getElementById('fidDrawer').classList.add('open');
+      const q = document.getElementById('fidQ');
+      q.value = ''; setTimeout(() => q.focus(), 320);
+    }
+
+    function closeFid(){
+      pararEscaner();
+      document.getElementById('fidBg').classList.remove('open');
+      document.getElementById('fidDrawer').classList.remove('open');
+    }
+
+    function fidFresco(){ return !!(fidPedido && (Date.now() - fidPedido.cuando) < FID_VENTANA); }
+
+    function mostrarLiga(){
+      const liga = document.getElementById('fidLiga');
+      if (!liga) return;
+      const fresco = fidFresco();
+      liga.classList.toggle('field-hide', !fresco);
+      if (fresco){
+        document.getElementById('fidLigaTxt').textContent = 'pedido #' + fidPedido.id;
+        document.getElementById('fidLigaChk').checked = true;
+      }
+    }
+
+    function pedidoParaSello(){
+      return (fidFresco() && document.getElementById('fidLigaChk').checked) ? fidPedido.id : null;
+    }
+
+    function fidError(msg){ document.getElementById('fidErr').textContent = msg || ''; }
+    function fidHint(msg){ document.getElementById('fidHint').innerHTML = msg || ''; }
+
+    // ── Buscar al cliente ──
+    async function buscarCliente(valor){
+      const q = String(valor ?? document.getElementById('fidQ').value).trim();
+      if (!q) return;
+      fidError(''); fidHint('Buscando…');
+      try {
+        const r = await fetch('/clientes/buscar?q=' + encodeURIComponent(q), { headers: authHeaders() });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        fidHint('');
+        if (!r.ok){ pintarCliente(null); fidError(d.error || 'No se pudo buscar'); return; }
+        pintarCliente(d);
+      } catch {
+        fidHint(''); fidError('Sin conexión con el servidor');
+      }
+    }
+
+    function pintarCliente(d){
+      const card = document.getElementById('fidCard');
+      if (!d){ fidCliente = null; card.classList.remove('on'); card.innerHTML = ''; return; }
+      // La respuesta de sellar no repite el código ni las reglas: se conservan
+      // los del cliente que ya estaba en pantalla.
+      fidCliente = { ...(fidCliente || {}), ...d, codigo: d.codigo || (fidCliente && fidCliente.codigo) };
+      const meta = d.reglas || fidReglas || { sellos_por_premio: 10, premio_descripcion: 'el premio' };
+      const total = Math.max(1, Number(meta.sellos_por_premio) || 10);
+      const saldo = Number(d.sellos) || 0;
+      const puede = !!d.puedeCanjear;
+      // La cartilla en curso: con 12 sellos y premio cada 10, van 2 en la
+      // segunda. Si ya alcanza para el premio, se pinta completa.
+      const enCartilla = puede ? total : saldo % total;
+      let dots = '';
+      for (let i = 0; i < total; i++) dots += '<div class="fid-dot' + (i < enCartilla ? ' on' : '') + '"></div>';
+      const falta = total - enCartilla;
+      card.innerHTML =
+        '<div class="fid-nombre">' + esc(fidCliente.nombre) + '</div>' +
+        '<div class="fid-cod">' + esc(fidCliente.codigo || '') + '</div>' +
+        '<div class="fid-dots">' + dots + '</div>' +
+        '<div class="fid-saldo">' + saldo + (saldo === 1 ? ' sello' : ' sellos') +
+          (puede ? '' : ' · le faltan ' + falta + ' para ' + esc(meta.premio_descripcion)) + '</div>' +
+        (puede ? '<div class="fid-premio">🎁 Completó la tarjeta: ' + esc(meta.premio_descripcion) + '</div>' : '') +
+        '<div class="fid-acciones">' +
+          '<button class="fid-btn" onclick="darSello()">+1 sello</button>' +
+          (puede ? '<button class="fid-btn go" onclick="canjearPremio()">Entregar premio</button>' : '') +
+        '</div>';
+      card.classList.add('on');
+    }
+
+    async function darSello(){
+      await accionFid('sello', d => {
+        toast('✅ Sello para ' + d.nombre + ' · ' + d.sellos + ' en total', 'ok');
+        // El vínculo con el pedido se gasta de una: si no se soltara, el
+        // siguiente sello lo reintentaría y el servidor lo rebotaría por
+        // repetido.
+        fidPedido = null; mostrarLiga();
+      });
+    }
+
+    async function canjearPremio(){
+      await accionFid('canjear', d => toast('🎁 ' + d.premio + ' para ' + d.nombre, 'ok'));
+    }
+
+    async function accionFid(ruta, ok){
+      if (!fidCliente || !fidCliente.codigo) return;
+      const card = document.getElementById('fidCard');
+      const botones = card.querySelectorAll('.fid-btn');
+      botones.forEach(b => b.disabled = true);
+      fidError('');
+      try {
+        const r = await fetch('/clientes/' + encodeURIComponent(fidCliente.codigo) + '/' + ruta, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ pedidoId: pedidoParaSello() }),
+        });
+        if (sesionExpirada(r)) return;
+        const d = await r.json();
+        if (!r.ok || !d.success){
+          fidError(d.error || 'No se pudo completar');
+          botones.forEach(b => b.disabled = false);
+          return;
+        }
+        ok(d);
+        pintarCliente(d);
+      } catch {
+        fidError('Sin conexión con el servidor');
+        botones.forEach(b => b.disabled = false);
+      }
+    }
+
+    // ── Escaneo del QR ──
+    //
+    // Dos motores: BarcodeDetector, que ya viene en Chrome y Edge y no pesa
+    // nada, y jsQR para los que no lo traen (el Safari del iPhone, sobre
+    // todo). El segundo se descarga solo si hace falta.
+    const JSQR_CDN = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+
+    async function motorQR(){
+      try {
+        if ('BarcodeDetector' in window){
+          const fmts = await BarcodeDetector.getSupportedFormats();
+          if (fmts.includes('qr_code')) return new BarcodeDetector({ formats: ['qr_code'] });
+        }
+      } catch {}
+      if (!window.jsQR){
+        await new Promise((res, rej) => {
+          const sc = document.createElement('script');
+          sc.src = JSQR_CDN; sc.onload = res; sc.onerror = () => rej(new Error('jsQR'));
+          document.head.appendChild(sc);
+        });
+      }
+      return null;   // null = leer con jsQR
+    }
+
+    async function toggleEscaner(){
+      if (fidStream){ pararEscaner(); return; }
+      if (!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+        fidHint('Aquí el navegador no entrega la cámara: solo la da en <b>https</b> o en <b>localhost</b>, y esta pantalla se abrió por la IP de la red. Dicta el código de la tarjeta o busca por teléfono.');
+        return;
+      }
+      fidError(''); fidHint('Abriendo la cámara…');
+      try {
+        fidDetector = await motorQR();
+      } catch {
+        fidHint(''); fidError('No se pudo cargar el lector de QR (¿sin internet?). Escribe el código.');
+        return;
+      }
+      try {
+        fidStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      } catch {
+        fidHint(''); fidError('No se pudo abrir la cámara. Escribe el código o busca por teléfono.');
+        return;
+      }
+      const v = document.getElementById('fidVideo');
+      v.srcObject = fidStream;
+      try { await v.play(); } catch {}
+      document.getElementById('fidCam').classList.add('on');
+      document.getElementById('fidScanBtn').textContent = 'Cerrar cámara';
+      fidHint('Apunta al QR de la tarjeta.');
+      // Cuatro lecturas por segundo alcanzan de sobra y no calientan el
+      // teléfono como haría un bucle por cuadro.
+      fidTimer = setInterval(leerFrame, 250);
+    }
+
+    function pararEscaner(){
+      if (fidTimer){ clearInterval(fidTimer); fidTimer = null; }
+      if (fidStream){ fidStream.getTracks().forEach(t => t.stop()); fidStream = null; }
+      const v = document.getElementById('fidVideo'); if (v) v.srcObject = null;
+      document.getElementById('fidCam').classList.remove('on');
+      const b = document.getElementById('fidScanBtn'); if (b) b.innerHTML = FID_SCAN_LABEL;
+    }
+
+    async function leerFrame(){
+      const v = document.getElementById('fidVideo');
+      if (!v || !v.videoWidth) return;
+      let texto = null;
+      try {
+        if (fidDetector){
+          const cods = await fidDetector.detect(v);
+          if (cods && cods.length) texto = cods[0].rawValue;
+        } else if (window.jsQR){
+          if (!_fidCanvas) _fidCanvas = document.createElement('canvas');
+          const w = 320, h = Math.max(1, Math.round(v.videoHeight * (320 / v.videoWidth)));
+          _fidCanvas.width = w; _fidCanvas.height = h;
+          const ctx = _fidCanvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(v, 0, 0, w, h);
+          const img = ctx.getImageData(0, 0, w, h);
+          const res = window.jsQR(img.data, w, h);
+          if (res) texto = res.data;
+        }
+      } catch {}
+      const cod = codigoDeQR(texto);
+      if (!cod) return;
+      pararEscaner();
+      document.getElementById('fidQ').value = cod;
+      buscarCliente(cod);
+    }
+
+    // El QR de la tarjeta lleva el código pelado. Si alguna vez llevara la URL
+    // completa, de ahí también sale.
+    function codigoDeQR(texto){
+      let t = String(texto || '').trim();
+      if (!t) return null;
+      const m = t.match(/[?&]c=([^&]+)/);
+      if (m) t = decodeURIComponent(m[1]);
+      t = t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return t.length >= 6 ? t : null;
     }
 
     function toast(msg, kind){

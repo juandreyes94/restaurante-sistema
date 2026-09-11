@@ -147,6 +147,12 @@ async function editar(id, fields) {
 }
 async function remove(id) {
   _data.orders = _data.orders.filter(o => o.id !== id);
+  // En Supabase la llave de sellos y canjes es ON DELETE SET NULL; aquí hay
+  // que hacerlo a mano. Un sello que se quede apuntando a un pedido borrado
+  // envenena ese id: cuando vuelva a entregarse, el pedido nuevo heredaría el
+  // sello y el mesero vería "ese pedido ya tenía sello" sin haberlo sellado.
+  (_data.sellos || []).forEach(s => { if (s.pedido_id === id) s.pedido_id = null; });
+  (_data.canjes || []).forEach(c => { if (c.pedido_id === id) c.pedido_id = null; });
   save();
 }
 async function marcarFacturado(id, { cufe, number } = {}) {
